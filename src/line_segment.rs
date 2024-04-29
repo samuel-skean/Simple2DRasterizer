@@ -13,7 +13,7 @@ impl Draw for LineSegment {
         for t in 0..LERP_RESOLUTION {
             let Point2D(x, y) = self.p0 + self.p1 * (1.0 - t as f64/LERP_RESOLUTION as f64);
             // TODO: There's probably a better way that doesn't involve casting *here* but does allow me to maintain the known bit-width of the point coordinates. Not doing it now.
-            target[x as usize][y as usize] = self.color;
+            target[y as usize][x as usize] = self.color;
         }
     }
 }
