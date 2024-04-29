@@ -29,7 +29,14 @@ fn main() {
         color: Color(255, 255, 255),
     };
 
+    let line_seg2 = LineSegment {
+        p0: Point2D(350, 30),
+        p1: Point2D(40, 90),
+        color: Color(130, 20, 75),
+    };
+
     line_seg1.draw(&mut image);
+    line_seg2.draw(&mut image);
 
     // PPM Image Header
     println!("P3");
