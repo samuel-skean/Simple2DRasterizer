@@ -1,5 +1,3 @@
-// NOTE: This is kinda evil, but I'm pushing Rust for the fun of it and to get something done fast.
-
 use std::ops::{Add, Mul};
 
 #[derive(Clone, Copy)]
