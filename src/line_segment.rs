@@ -1,4 +1,4 @@
-use crate::{draw::Draw, lerp, vec::{Color, Point2D}, PixelGrid};
+use crate::{draw::Draw, lerp, point_and_color::{Color, Point2D}, PixelGrid};
 
 pub struct LineSegment {
     pub p0: Point2D,

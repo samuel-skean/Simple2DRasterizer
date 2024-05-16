@@ -1,11 +1,11 @@
-use vec::Color;
+use point_and_color::Color;
 
-use crate::{bezier_curve::QuadraticBezierCurve, draw::Draw, line_segment::LineSegment, vec::Point2D};
+use crate::{bezier_curve::QuadraticBezierCurve, draw::Draw, line_segment::LineSegment, point_and_color::Point2D};
 
 
 mod draw;
 mod line_segment;
-mod vec;
+mod point_and_color;
 mod bezier_curve;
 
 struct Resolution {
