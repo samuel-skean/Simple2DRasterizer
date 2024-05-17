@@ -16,9 +16,8 @@ impl Draw for QuadraticBezierCurve {
             let point_along_segment_from_p0_to_p1 = lerp(self.p0, self.p1, t);
             let point_along_segment_from_p1_to_p2 = lerp(self.p1, self.p2, t);
             let point_on_curve = lerp(point_along_segment_from_p0_to_p1, point_along_segment_from_p1_to_p2, t);
-            let Point2D(x, y) = point_on_curve;
 
-            target[y as usize][x as usize] = self.color;
+            point_on_curve.draw_specifying_color(target, self.color);
         }
     }
 }

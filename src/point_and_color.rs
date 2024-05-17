@@ -1,4 +1,5 @@
 use std::ops::{Add, Mul};
+use crate::PixelGrid;
 
 #[derive(Clone, Copy)]
 pub struct Point2D(pub u64, pub u64); // A point in 2d space, represented as (x, y), with (0, 0) as the upper-left corner.
@@ -17,5 +18,12 @@ impl Add for Point2D {
     type Output = Point2D;
     fn add(self, rhs: Self) -> Self::Output {
         Point2D(self.0 + rhs.0, self.1 + rhs.1)
+    }
+}
+
+impl Point2D {
+    pub fn draw_specifying_color(&self, target: &mut PixelGrid, color: Color) {
+        target[self.1 as usize][self.0 as usize] = color; // The order of the coordinates is weird
+                                                          // and unintuitive!
     }
 }
