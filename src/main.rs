@@ -30,26 +30,33 @@ fn main() {
     let mut image: PixelGrid = vec![ vec![Color(0, 0, 0); 400]; 400 ];
 
     let line_seg1 = LineSegment {
-        p0: Point2D(0, 0),
-        p1: Point2D(250, 20),
+        p0: Point2D(0.0, 0.0),
+        p1: Point2D(250.0, 20.0),
         color: Color(255, 255, 255),
     };
 
     let line_seg2 = LineSegment {
-        p0: Point2D(350, 30),
-        p1: Point2D(40, 90),
+        p0: Point2D(350.0, 30.0),
+        p1: Point2D(40.0, 90.0),
         color: Color(130, 20, 75),
     };
 
+    let line_seg3 = LineSegment {
+        p0: Point2D(0.0, 200.0),
+        p1: Point2D(400.0, 200.0),
+        color: Color(75, 75, 75)
+    };
+
     let bezier1 = QuadraticBezierCurve {
-        p0: Point2D(20, 300),
-        p1: Point2D(350, 350),
-        p2: Point2D(350, 20),
+        p0: Point2D(20.0, 300.0),
+        p1: Point2D(350.0, 350.0),
+        p2: Point2D(350.0, 20.0),
         color: Color(0, 127, 0),
     };
 
     line_seg1.draw(&mut image);
     line_seg2.draw(&mut image);
+    line_seg3.draw(&mut image);
     bezier1.draw(&mut image);
 
     // PPM Image Header
