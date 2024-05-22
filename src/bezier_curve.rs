@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 use crate::{
     draw::Draw,
     lerp,
@@ -5,6 +7,7 @@ use crate::{
     PixelGrid,
 };
 
+#[derive(Deserialize, Serialize)]
 pub struct QuadraticBezierCurve {
     pub p0: Point2D,
     pub p1: Point2D,
@@ -14,6 +17,7 @@ pub struct QuadraticBezierCurve {
 
 const LERP_RESOLUTION_FOR_BEZIER_CURVES: u64 = 10_000;
 
+#[typetag::serde]
 impl Draw for QuadraticBezierCurve {
     fn draw(&self, target: &mut PixelGrid) {
         for integral_t in 0..LERP_RESOLUTION_FOR_BEZIER_CURVES {

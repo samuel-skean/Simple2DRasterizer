@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 use crate::{
     draw::Draw,
     lerp,
@@ -5,6 +7,7 @@ use crate::{
     PixelGrid,
 };
 
+#[derive(Deserialize, Serialize)]
 pub struct LineSegment {
     pub p0: Point2D,
     pub p1: Point2D,
@@ -13,6 +16,7 @@ pub struct LineSegment {
 
 const LERP_RESOLUTION_FOR_LINE_SEGMENTS: u64 = 1_000;
 
+#[typetag::serde]
 impl Draw for LineSegment {
     fn draw(&self, target: &mut PixelGrid) {
         for integral_t in 0..LERP_RESOLUTION_FOR_LINE_SEGMENTS {

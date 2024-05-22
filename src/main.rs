@@ -1,9 +1,9 @@
+use std::{fs::File, io::BufReader};
+
 use pixel_grid::Resolution;
-use point_and_color::Color;
 
 use crate::{
-    bezier_curve::QuadraticBezierCurve, draw::Draw, line_segment::LineSegment,
-    pixel_grid::PixelGrid, point_and_color::Point2D, world::World,
+    draw::Draw, pixel_grid::PixelGrid, point_and_color::Point2D, world::World,
 };
 
 mod bezier_curve;
@@ -26,34 +26,7 @@ fn main() {
 
     let mut image: PixelGrid = PixelGrid::new(res);
 
-    let mut world: World = vec![
-        Box::new(LineSegment {
-            p0: Point2D(0.0, 0.0),
-            p1: Point2D(250.0, 20.0),
-            color: Color(255, 255, 255),
-        }),
-        Box::new(LineSegment {
-            p0: Point2D(350.0, 30.0),
-            p1: Point2D(40.0, 90.0),
-            color: Color(130, 20, 75),
-        }),
-        Box::new(LineSegment {
-            p0: Point2D(0.0, 200.0),
-            p1: Point2D(400.0, 200.0),
-            color: Color(75, 75, 75),
-        }),
-    ];
-
-    // TODO: It seems like there should be a way to construct a vec of Boxes
-    // that point to different types at once, but I don't know how to figure it
-    // out.
-    world.push(Box::new(QuadraticBezierCurve {
-        p0: Point2D(20.0, 300.0),
-        p1: Point2D(350.0, 350.0),
-        p2: Point2D(350.0, 20.0),
-        color: Color(0, 127, 0),
-    }));
-
+    let world: World = serde_json::from_reader(BufReader::new(File::open("sample_world.json").unwrap())).unwrap();
     world.draw(&mut image);
 
     image.save_as_ppm(&mut std::io::stdout()).unwrap();
