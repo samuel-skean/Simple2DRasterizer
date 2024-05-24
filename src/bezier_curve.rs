@@ -1,5 +1,3 @@
-use serde::{Deserialize, Serialize};
-
 use crate::{
     draw::Draw,
     lerp,
@@ -7,30 +5,32 @@ use crate::{
     PixelGrid,
 };
 
-#[derive(Deserialize, Serialize)]
-pub struct QuadraticBezierCurve {
-    pub p0: Point2D,
-    pub p1: Point2D,
-    pub p2: Point2D,
+pub struct BezierCurve<const degree: usize> 
+    where [Point2D; degree + 1]: Sized
+{
+    pub points: [Point2D; degree + 1],
     pub color: Color,
 }
 
+pub type QuadraticBezierCurve = BezierCurve<2>;
+
 const LERP_RESOLUTION_FOR_BEZIER_CURVES: u64 = 10_000;
 
-#[typetag::serde]
-impl Draw for QuadraticBezierCurve {
+impl <const degree: usize> Draw for BezierCurve<degree> 
+where [Point2D; degree + 1]: Sized, [Point2D; degree - 1]: Sized
+{
     fn draw(&self, target: &mut PixelGrid) {
         for integral_t in 0..LERP_RESOLUTION_FOR_BEZIER_CURVES {
             let t = integral_t as f64 / LERP_RESOLUTION_FOR_BEZIER_CURVES as f64;
-            let point_along_segment_from_p0_to_p1 = lerp(self.p0, self.p1, t);
-            let point_along_segment_from_p1_to_p2 = lerp(self.p1, self.p2, t);
-            let point_on_curve = lerp(
-                point_along_segment_from_p0_to_p1,
-                point_along_segment_from_p1_to_p2,
-                t,
-            );
-
-            point_on_curve.draw_specifying_color(target, self.color);
+            for num_lerps in (0..degree + 1).rev() {
+                let mut points_along_segments = [Point2D(0.0, 0.0); num_lerps]; // At this point I give up.
+                for (i, point) in points_along_segments.iter_mut().enumerate() {
+                    *point = lerp(self.points[i], self.points[i + 1], t);
+                }
+                if num_lerps == 1 {
+                    points_along_segments[0].draw_specifying_color(target, self.color)
+                }
+            }
         }
     }
 }

@@ -1,6 +1,8 @@
-use std::{fs::File, io::BufReader};
+#![feature(generic_const_exprs)]
 
+use bezier_curve::QuadraticBezierCurve;
 use pixel_grid::Resolution;
+use point_and_color::Color;
 
 use crate::{
     draw::Draw, pixel_grid::PixelGrid, point_and_color::Point2D, world::World,
@@ -25,8 +27,13 @@ fn main() {
     };
 
     let mut image: PixelGrid = PixelGrid::new(res);
+    let mut world = World::new();
 
-    let world: World = serde_json::from_reader(BufReader::new(File::open("sample_world.json").unwrap())).unwrap();
+    world.push(Box::new(QuadraticBezierCurve {
+        points: [Point2D(20.0, 300.0), Point2D(350.0, 350.0), Point2D(350.0, 20.0)],
+        color: Color(0, 127, 0),
+    }));
+
     world.draw(&mut image);
 
     image.save_as_ppm(&mut std::io::stdout()).unwrap();
