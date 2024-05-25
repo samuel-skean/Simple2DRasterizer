@@ -8,7 +8,7 @@ use sdl2::messagebox::{show_simple_message_box, MessageBoxFlag};
 
 use crate::{draw::Draw, pixel_grid::PixelGrid, point_and_color::Point2D, world::World};
 
-mod bezier_curve;
+mod bezier_curves;
 mod draw;
 mod line_segment;
 mod pixel_grid;
@@ -20,7 +20,7 @@ fn lerp(p0: Point2D, p1: Point2D, t: f64) -> Point2D {
     p0 * (1.0 - t) + p1 * t
 }
 
-use sdl2::event::{self, Event};
+use sdl2::event::Event;
 use sdl2::keyboard::{self, Keycode};
 use std::time::Duration;
 
