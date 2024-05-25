@@ -14,6 +14,7 @@ mod line_segment;
 mod pixel_grid;
 mod point_and_color;
 mod world;
+mod splines;
 
 // This belongs in some other file but I'm lazy...
 fn lerp(p0: Point2D, p1: Point2D, t: f64) -> Point2D {
