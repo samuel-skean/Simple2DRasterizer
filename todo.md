@@ -1,0 +1,1 @@
+Use serde_with to solve the problem of not being able to serialize the generic arrays!
