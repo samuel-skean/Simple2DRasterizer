@@ -1,10 +1,10 @@
 use std::{fs::File, io::BufReader};
 
 use pixel_grid::Resolution;
+use rfd::FileDialog;
+use sdl2::messagebox::{show_simple_message_box, MessageBoxFlag};
 
-use crate::{
-    draw::Draw, pixel_grid::PixelGrid, point_and_color::Point2D, world::World,
-};
+use crate::{draw::Draw, pixel_grid::PixelGrid, point_and_color::Point2D, world::World};
 
 mod bezier_curve;
 mod draw;
@@ -22,7 +22,6 @@ use sdl2::event::Event;
 use sdl2::keyboard::{self, Keycode};
 use std::time::Duration;
 
-
 pub fn main() -> Result<(), String> {
     let res = Resolution {
         width: 400,
@@ -31,12 +30,11 @@ pub fn main() -> Result<(), String> {
 
     let mut image: PixelGrid = PixelGrid::new(res);
 
-    let world: World = serde_json::from_reader(BufReader::new(File::open("sample_world.json").unwrap())).unwrap();
+    let world: World =
+        serde_json::from_reader(BufReader::new(File::open("sample_world.json").unwrap())).unwrap();
     world.draw(&mut image);
 
     image.save_as_ppm(&mut std::io::stdout()).unwrap();
-
-
 
     let sdl_context = sdl2::init()?;
     let video_subsystem = sdl_context.video()?;
@@ -52,6 +50,8 @@ pub fn main() -> Result<(), String> {
 
     put_something_on_the_goshdarn_screen(surface, &mut image)?;
 
+    let mut save_file = false;
+
     'running: loop {
         for event in event_pump.poll_iter() {
             match event {
@@ -60,9 +60,37 @@ pub fn main() -> Result<(), String> {
                     keycode: Some(Keycode::Escape),
                     ..
                 } => break 'running,
+                Event::KeyDown {
+                    keycode: Some(Keycode::S),
+                    keymod: keyboard::Mod::LCTRLMOD,
+                    ..
+                } => {
+                    save_file = true;
+                }
                 _ => {}
             }
         }
+
+        if save_file {
+            let file_path = FileDialog::new()
+                .set_directory(".")
+                .save_file();
+            match file_path {
+                Some(file_path) => {
+                    let surface = window.surface(&event_pump)?;
+                    surface.save_bmp(file_path)?;
+                }
+                None => show_simple_message_box(
+                    MessageBoxFlag::INFORMATION,
+                    "Invalid File",
+                    "We didn't get a valid file back from the dialog box.",
+                    &window,
+                )
+                .unwrap(),
+            }
+        }
+
+        save_file = false;
 
         std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 30));
         // The rest of the game loop goes here...
@@ -71,9 +99,17 @@ pub fn main() -> Result<(), String> {
     Ok(())
 }
 
-fn put_something_on_the_goshdarn_screen(mut surface: sdl2::video::WindowSurfaceRef, image: &mut PixelGrid) -> Result<(), String> {
-    let surface_slice: &mut [u32] = unsafe { // Look ma! A silly little bit of unsafe!
-        std::mem::transmute(surface.without_lock_mut().ok_or("Unable to write to the surface.")?)
+fn put_something_on_the_goshdarn_screen(
+    mut surface: sdl2::video::WindowSurfaceRef,
+    image: &mut PixelGrid,
+) -> Result<(), String> {
+    let surface_slice: &mut [u32] = unsafe {
+        // Look ma! A silly little bit of unsafe!
+        std::mem::transmute(
+            surface
+                .without_lock_mut()
+                .ok_or("Unable to write to the surface.")?,
+        )
     };
     for (i, p) in image.0.iter_mut().flatten().enumerate() {
         let color: sdl2::pixels::Color = (*p).into();
