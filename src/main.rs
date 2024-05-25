@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use std::process::exit;
 use std::{fs::File, io::BufReader};
 
 use pixel_grid::Resolution;
@@ -19,7 +20,7 @@ fn lerp(p0: Point2D, p1: Point2D, t: f64) -> Point2D {
     p0 * (1.0 - t) + p1 * t
 }
 
-use sdl2::event::Event;
+use sdl2::event::{self, Event};
 use sdl2::keyboard::{self, Keycode};
 use std::time::Duration;
 
@@ -38,7 +39,7 @@ pub fn main() -> Result<(), String> {
         .build()
         .map_err(|e| e.to_string())?;
 
-    let mut image: PixelGrid = PixelGrid::new(res);
+    let image: PixelGrid = PixelGrid::new(res);
 
     let world = loop {
         let world_path_option = FileDialog::new().set_directory(".").pick_file();
@@ -70,65 +71,72 @@ pub fn main() -> Result<(), String> {
         }
     };
 
-    world.draw(&mut image);
 
-    image.save_as_ppm(&mut std::io::stdout()).unwrap();
+    // I'm super happy about scoped threads since they let me do what I want at 
+    // all, very easily... but I'm not too happy about this extra indentation.
+    std::thread::scope(|s| -> Result<(), String> {
+        s.spawn(|| world.draw(&image));
 
-    let mut event_pump = sdl_context.event_pump()?;
-    let surface = window.surface(&event_pump)?;
+        let mut event_pump = sdl_context.event_pump()?;
+        let surface = window.surface(&event_pump)?;
 
-    put_something_on_the_goshdarn_screen(surface, &mut image)?;
+        put_something_on_the_goshdarn_screen(surface, &image)?;
 
-    let mut save_file = false;
+        let mut save_file = false;
 
-    'running: loop {
-        for event in event_pump.poll_iter() {
-            match event {
-                Event::Quit { .. }
-                | Event::KeyDown {
-                    keycode: Some(Keycode::Escape),
-                    ..
-                } => break 'running,
-                Event::KeyDown {
-                    keycode: Some(Keycode::S),
-                    keymod: keyboard::Mod::LCTRLMOD,
-                    ..
-                } => {
-                    save_file = true;
+        loop {
+            for event in event_pump.poll_iter() {
+                match event {
+                    Event::Quit { .. }
+                    | Event::KeyDown {
+                        keycode: Some(Keycode::Escape),
+                        ..
+                    } => exit(0),
+                    Event::KeyDown {
+                        keycode: Some(Keycode::S),
+                        keymod: keyboard::Mod::LCTRLMOD,
+                        ..
+                    } => {
+                        save_file = true;
+                    }
+                    _ => {}
                 }
-                _ => {}
             }
-        }
 
-        if save_file {
-            let file_path_option = FileDialog::new().set_directory(".").save_file();
-            match file_path_option {
-                Some(file_path) => {
-                    let surface = window.surface(&event_pump)?;
-                    surface.save_bmp(file_path)?;
+            let surface = window.surface(&event_pump)?;
+
+            if save_file {
+                let file_path_option = FileDialog::new().set_directory(".").save_file();
+                match file_path_option {
+                    Some(file_path) => {
+                        surface.save_bmp(file_path)?;
+                    }
+                    None => show_simple_message_box(
+                        MessageBoxFlag::INFORMATION,
+                        "Invalid Path",
+                        "We didn't get a valid path back from the dialog box.",
+                        &window,
+                    )
+                    .unwrap(),
                 }
-                None => show_simple_message_box(
-                    MessageBoxFlag::INFORMATION,
-                    "Invalid Path",
-                    "We didn't get a valid path back from the dialog box.",
-                    &window,
-                )
-                .unwrap(),
             }
+
+            save_file = false;
+
+            put_something_on_the_goshdarn_screen(surface, &image)?;
+
+            std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 30));
+            // The rest of the game loop goes here...
         }
-
-        save_file = false;
-
-        std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 30));
-        // The rest of the game loop goes here...
-    }
-
-    Ok(())
+    }).and_then(|_| {
+        image.save_as_ppm(&mut std::io::stdout()).unwrap();
+        Ok(())
+    })
 }
 
 fn put_something_on_the_goshdarn_screen(
     mut surface: sdl2::video::WindowSurfaceRef,
-    image: &mut PixelGrid,
+    image: &PixelGrid,
 ) -> Result<(), String> {
     let surface_slice: &mut [u32] = unsafe {
         // Look ma! A silly little bit of unsafe!
@@ -138,8 +146,8 @@ fn put_something_on_the_goshdarn_screen(
                 .ok_or("Unable to write to the surface.")?,
         )
     };
-    for (i, p) in image.0.iter_mut().flatten().enumerate() {
-        let color: sdl2::pixels::Color = (*p).into();
+    for (i, p) in image.0.iter().flatten().enumerate() {
+        let color: sdl2::pixels::Color = p.into();
         let color_as_number = color.to_u32(&surface.pixel_format());
         surface_slice[i] = color_as_number;
     }

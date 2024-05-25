@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -19,7 +21,7 @@ const LERP_RESOLUTION_FOR_BEZIER_CURVES: u64 = 10_000;
 
 #[typetag::serde]
 impl Draw for QuadraticBezierCurve {
-    fn draw(&self, target: &mut PixelGrid) {
+    fn draw(&self, target: &PixelGrid) {
         for integral_t in 0..LERP_RESOLUTION_FOR_BEZIER_CURVES {
             let t = integral_t as f64 / LERP_RESOLUTION_FOR_BEZIER_CURVES as f64;
             let point_along_segment_from_p0_to_p1 = lerp(self.p0, self.p1, t);
@@ -31,6 +33,7 @@ impl Draw for QuadraticBezierCurve {
             );
 
             point_on_curve.draw_specifying_color(target, self.color);
+            std::thread::sleep(Duration::from_millis(2));
         }
     }
 }
