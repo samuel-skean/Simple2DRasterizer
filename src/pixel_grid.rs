@@ -4,6 +4,7 @@ use crate::point_and_color::Color;
 
 pub struct PixelGrid(pub Vec<Vec<Color>>);
 
+#[derive(Clone, Copy)]
 pub struct Resolution {
     pub width: usize,
     pub height: usize,

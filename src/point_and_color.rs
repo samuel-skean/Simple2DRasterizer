@@ -8,6 +8,12 @@ pub struct Point2D(pub f64, pub f64); // A point in 2d space, represented as (x,
 #[derive(Clone, Copy, Deserialize, Serialize)]
 pub struct Color(pub u8, pub u8, pub u8); // An 8-bit-per-channel/24-bit-total color, suitable for "millions" (about 16.7 million) colors.
 
+impl Into<sdl2::pixels::Color> for Color {
+    fn into(self) -> sdl2::pixels::Color {
+        sdl2::pixels::Color::RGB(self.0, self.1, self.2)
+    }
+}
+
 impl Mul<f64> for Point2D {
     type Output = Point2D;
     fn mul(self, rhs: f64) -> Self::Output {
