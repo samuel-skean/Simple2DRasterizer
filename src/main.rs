@@ -19,8 +19,9 @@ fn lerp(p0: Point2D, p1: Point2D, t: f64) -> Point2D {
 }
 
 use sdl2::event::Event;
-use sdl2::keyboard::Keycode;
+use sdl2::keyboard::{self, Keycode};
 use std::time::Duration;
+
 
 pub fn main() -> Result<(), String> {
     let res = Resolution {
@@ -47,18 +48,9 @@ pub fn main() -> Result<(), String> {
         .map_err(|e| e.to_string())?;
 
     let mut event_pump = sdl_context.event_pump()?;
-    let mut surface = window.surface(&event_pump)?;
+    let surface = window.surface(&event_pump)?;
 
-    let surface_slice: &mut [u32] = unsafe { // Look ma! A silly little bit of unsafe!
-        std::mem::transmute(surface.without_lock_mut().ok_or("Unable to write to the surface.")?)
-    };
-    for (i, p) in image.0.iter_mut().flatten().enumerate() {
-        let color: sdl2::pixels::Color = (*p).into();
-        let color_as_number = color.to_u32(&surface.pixel_format());
-        surface_slice[i] = color_as_number;
-    }
-
-    surface.finish()?;
+    put_something_on_the_goshdarn_screen(surface, &mut image)?;
 
     'running: loop {
         for event in event_pump.poll_iter() {
@@ -76,5 +68,18 @@ pub fn main() -> Result<(), String> {
         // The rest of the game loop goes here...
     }
 
+    Ok(())
+}
+
+fn put_something_on_the_goshdarn_screen(mut surface: sdl2::video::WindowSurfaceRef, image: &mut PixelGrid) -> Result<(), String> {
+    let surface_slice: &mut [u32] = unsafe { // Look ma! A silly little bit of unsafe!
+        std::mem::transmute(surface.without_lock_mut().ok_or("Unable to write to the surface.")?)
+    };
+    for (i, p) in image.0.iter_mut().flatten().enumerate() {
+        let color: sdl2::pixels::Color = (*p).into();
+        let color_as_number = color.to_u32(&surface.pixel_format());
+        surface_slice[i] = color_as_number;
+    }
+    surface.finish()?;
     Ok(())
 }
