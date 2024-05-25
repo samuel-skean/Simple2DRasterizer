@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use std::{fs::File, io::BufReader};
 
 use pixel_grid::Resolution;
@@ -28,14 +29,6 @@ pub fn main() -> Result<(), String> {
         height: 400,
     };
 
-    let mut image: PixelGrid = PixelGrid::new(res);
-
-    let world: World =
-        serde_json::from_reader(BufReader::new(File::open("sample_world.json").unwrap())).unwrap();
-    world.draw(&mut image);
-
-    image.save_as_ppm(&mut std::io::stdout()).unwrap();
-
     let sdl_context = sdl2::init()?;
     let video_subsystem = sdl_context.video()?;
 
@@ -44,6 +37,42 @@ pub fn main() -> Result<(), String> {
         .position_centered()
         .build()
         .map_err(|e| e.to_string())?;
+
+    let mut image: PixelGrid = PixelGrid::new(res);
+
+    let world = loop {
+        let world_path_option = FileDialog::new().set_directory(".").pick_file();
+        match world_path_option {
+            Some(world_path) => {
+                fn load_world(world_path: PathBuf) -> anyhow::Result<World> {
+                    Ok(serde_json::from_reader(BufReader::new(File::open(
+                        world_path,
+                    )?))?)
+                }
+                match load_world(world_path) {
+                    Ok(world) => break world,
+                    Err(e) => show_simple_message_box(
+                        MessageBoxFlag::INFORMATION,
+                        "Invalid World File",
+                        e.to_string().as_str(),
+                        &window,
+                    )
+                    .unwrap(),
+                };
+            }
+            None => show_simple_message_box(
+                MessageBoxFlag::INFORMATION,
+                "Invalid Path",
+                "We didn't get a valid path back from the message box.",
+                &window,
+            )
+            .unwrap(),
+        }
+    };
+
+    world.draw(&mut image);
+
+    image.save_as_ppm(&mut std::io::stdout()).unwrap();
 
     let mut event_pump = sdl_context.event_pump()?;
     let surface = window.surface(&event_pump)?;
@@ -72,18 +101,16 @@ pub fn main() -> Result<(), String> {
         }
 
         if save_file {
-            let file_path = FileDialog::new()
-                .set_directory(".")
-                .save_file();
-            match file_path {
+            let file_path_option = FileDialog::new().set_directory(".").save_file();
+            match file_path_option {
                 Some(file_path) => {
                     let surface = window.surface(&event_pump)?;
                     surface.save_bmp(file_path)?;
                 }
                 None => show_simple_message_box(
                     MessageBoxFlag::INFORMATION,
-                    "Invalid File",
-                    "We didn't get a valid file back from the dialog box.",
+                    "Invalid Path",
+                    "We didn't get a valid path back from the dialog box.",
                     &window,
                 )
                 .unwrap(),
