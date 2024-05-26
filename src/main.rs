@@ -126,7 +126,7 @@ pub fn main() -> Result<(), String> {
 
             put_something_on_the_goshdarn_screen(surface, &image)?;
 
-            std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 30));
+            std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
             // The rest of the game loop goes here...
         }
     }).and_then(|_| {
