@@ -5,6 +5,7 @@ use std::{fs::File, io::BufReader};
 use pixel_grid::Resolution;
 use rfd::FileDialog;
 use sdl2::messagebox::{show_simple_message_box, MessageBoxFlag};
+use sdl2::sys::SDL_WindowFlags;
 
 use crate::{draw::Draw, pixel_grid::PixelGrid, point_and_color::Point2D, world::World};
 
@@ -38,9 +39,14 @@ pub fn main() -> Result<(), String> {
 
     let mut window = video_subsystem
         .window("Basic 2D Rasterizer", res.width as u32, res.height as u32)
+        // WTF. Why couldn't this be re-exported by the main crate? Why do I have to turn it into a u32?
+        .set_window_flags(SDL_WindowFlags::SDL_WINDOW_RESIZABLE as u32)
         .position_centered()
         .build()
         .map_err(|e| e.to_string())?;
+
+    window.set_minimum_size(res.width as u32, res.height as u32).map_err(|e| e.to_string())?;
+    window.set_maximum_size(res.width as u32 * 2, res.height as u32 * 2).map_err(|e| e.to_string())?;
 
     let image: PixelGrid = PixelGrid::new(res);
 
