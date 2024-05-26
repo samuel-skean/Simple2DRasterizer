@@ -42,48 +42,29 @@ pub fn main() -> Result<(), String> {
 
     let image: PixelGrid = PixelGrid::new(res);
 
-    let world = loop {
-        let world_path_option = FileDialog::new().set_directory(".").pick_file();
-        match world_path_option {
-            Some(world_path) => {
-                fn load_world(world_path: PathBuf) -> anyhow::Result<World> {
-                    Ok(serde_json::from_reader(BufReader::new(File::open(
-                        world_path,
-                    )?))?)
-                }
-                match load_world(world_path) {
-                    Ok(world) => break world,
-                    Err(e) => show_simple_message_box(
-                        MessageBoxFlag::INFORMATION,
-                        "Invalid World File",
-                        e.to_string().as_str(),
-                        &window,
-                    )
-                    .unwrap(),
-                };
-            }
-            None => show_simple_message_box(
-                MessageBoxFlag::INFORMATION,
-                "Invalid Path",
-                "We didn't get a valid path back from the message box.",
-                &window,
-            )
-            .unwrap(),
-        }
-    };
-
+    // I'm not totally clear on why I'm getting this warning - when I follow the
+    // advice the compiler gives me, I get a compiler error about World not
+    // implementing Copy. I really don't want to make it implement Copy, even if
+    // I think that's never triggered. It seems the compiler is having trouble
+    // analyzing exactly what can happen in the loop - I think it's behaving as
+    // expected and I just want it to (partly) solve the halting problem or
+    // whatever, and realize that my flag variable world_loaded has a special
+    // role in the loop.
+    #[allow(unused_assignments)]
+    // Starts out not existing - it starts to exist once it's loaded, further
+    // down:
+    let mut world: Option<World> = None;
 
     // I'm super happy about scoped threads since they let me do what I want at 
     // all, very easily... but I'm not too happy about this extra indentation.
     std::thread::scope(|s| -> Result<(), String> {
-        s.spawn(|| world.draw(&image));
-
         let mut event_pump = sdl_context.event_pump()?;
         let surface = window.surface(&event_pump)?;
 
         put_something_on_the_goshdarn_screen(surface, &image)?;
 
         let mut save_file = false;
+        let mut world_loaded = false;
 
         loop {
             for event in event_pump.poll_iter() {
@@ -123,6 +104,40 @@ pub fn main() -> Result<(), String> {
             }
 
             save_file = false;
+            if !world_loaded {
+                let world_path_option = FileDialog::new().set_directory(".").pick_file();
+                match world_path_option {
+                    Some(world_path) => {
+                        fn load_world(world_path: PathBuf) -> anyhow::Result<World> {
+                            Ok(serde_json::from_reader(BufReader::new(File::open(
+                                world_path,
+                            )?))?)
+                        }
+                        match load_world(world_path) {
+                            Ok(w) => {
+                                world = Some(w);
+                                world_loaded = true;
+                                let image_borrow = &image;
+                                s.spawn(move || world.unwrap().draw(image_borrow));
+                            }
+                            Err(e) => show_simple_message_box(
+                                MessageBoxFlag::INFORMATION,
+                                "Invalid World File",
+                                e.to_string().as_str(),
+                                &window,
+                            )
+                            .unwrap(),
+                        };
+                    }
+                    None => show_simple_message_box(
+                        MessageBoxFlag::INFORMATION,
+                        "Invalid Path",
+                        "We didn't get a valid path back from the message box.",
+                        &window,
+                    )
+                    .unwrap(),
+                }
+            }
 
             put_something_on_the_goshdarn_screen(surface, &image)?;
 
