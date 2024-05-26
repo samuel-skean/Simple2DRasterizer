@@ -1,3 +1,7 @@
+#[allow(deprecated)]
+use raw_window_handle::HasRawWindowHandle;
+use raw_window_handle::{ActiveHandle, WindowHandle};
+
 use std::path::PathBuf;
 use std::process::exit;
 use std::{fs::File, io::BufReader};
@@ -40,6 +44,9 @@ pub fn main() -> Result<(), String> {
         .build()
         .map_err(|e| e.to_string())?;
 
+    let active_handle = ActiveHandle::new();
+    let window_handle = unsafe {WindowHandle::borrow_raw(window.raw_window_handle(), active_handle)};
+
     let image: PixelGrid = PixelGrid::new(res);
 
     // I'm not totally clear on why I'm getting this warning - when I follow the
@@ -63,7 +70,7 @@ pub fn main() -> Result<(), String> {
 
         put_something_on_the_goshdarn_screen(surface, &image)?;
 
-        let mut save_file = false;
+        let mut save_bmp_image = false;
         let mut world_loaded = false;
 
         loop {
@@ -79,7 +86,7 @@ pub fn main() -> Result<(), String> {
                         keymod: keyboard::Mod::LCTRLMOD,
                         ..
                     } => {
-                        save_file = true;
+                        save_bmp_image = true;
                     }
                     _ => {}
                 }
@@ -87,8 +94,12 @@ pub fn main() -> Result<(), String> {
 
             let surface = window.surface(&event_pump)?;
 
-            if save_file {
-                let file_path_option = FileDialog::new().set_directory(".").save_file();
+            if save_bmp_image {
+                let file_path_option = FileDialog::new()
+                    .set_directory(".")
+                    .add_filter("bmp", &["bmp"])
+                    .set_parent(&window_handle)
+                    .save_file();
                 match file_path_option {
                     Some(file_path) => {
                         surface.save_bmp(file_path)?;
@@ -103,9 +114,12 @@ pub fn main() -> Result<(), String> {
                 }
             }
 
-            save_file = false;
+            save_bmp_image = false;
             if !world_loaded {
-                let world_path_option = FileDialog::new().set_directory(".").pick_file();
+                let world_path_option = FileDialog::new()
+                    .set_directory(".")
+                    .add_filter("json", &["json"])
+                    .pick_file();
                 match world_path_option {
                     Some(world_path) => {
                         fn load_world(world_path: PathBuf) -> anyhow::Result<World> {
