@@ -7,17 +7,17 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable 'simple-2d-rasterizer'",
+            "name": "Debug executable 'skean-splines-fun'",
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=simple-2d-rasterizer",
-                    "--package=simple-2d-rasterizer",
+                    "--bin=skean-splines-fun",
+                    "--package=skean-splines-fun",
                     "--no-default-features",
                     "--features=step-by-step-curves-and-lines"
                 ],
                 "filter": {
-                    "name": "simple-2d-rasterizer",
+                    "name": "skean-splines-fun",
                     "kind": "bin"
                 }
             },
@@ -27,16 +27,16 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in executable 'simple-2d-rasterizer'",
+            "name": "Debug unit tests in executable 'skean-splines-fun'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
-                    "--bin=simple-2d-rasterizer",
-                    "--package=simple-2d-rasterizer"
+                    "--bin=skean-splines-fun",
+                    "--package=skean-splines-fun"
                 ],
                 "filter": {
-                    "name": "simple-2d-rasterizer",
+                    "name": "skean-splines-fun",
                     "kind": "bin"
                 }
             },
