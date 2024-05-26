@@ -13,6 +13,7 @@
                     "build",
                     "--bin=simple-2d-rasterizer",
                     "--package=simple-2d-rasterizer",
+                    "--no-default-features",
                     "--features=step-by-step-curves-and-lines"
                 ],
                 "filter": {
