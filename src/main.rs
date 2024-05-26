@@ -63,7 +63,7 @@ pub fn main() -> Result<(), String> {
 
         put_something_on_the_goshdarn_screen(surface, &image)?;
 
-        let mut save_file = false;
+        let mut save_bmp_image = false;
         let mut world_loaded = false;
 
         loop {
@@ -79,7 +79,7 @@ pub fn main() -> Result<(), String> {
                         keymod: keyboard::Mod::LCTRLMOD,
                         ..
                     } => {
-                        save_file = true;
+                        save_bmp_image = true;
                     }
                     _ => {}
                 }
@@ -87,7 +87,7 @@ pub fn main() -> Result<(), String> {
 
             let surface = window.surface(&event_pump)?;
 
-            if save_file {
+            if save_bmp_image {
                 let file_path_option = FileDialog::new().set_directory(".").save_file();
                 match file_path_option {
                     Some(file_path) => {
@@ -103,7 +103,7 @@ pub fn main() -> Result<(), String> {
                 }
             }
 
-            save_file = false;
+            save_bmp_image = false;
             if !world_loaded {
                 let world_path_option = FileDialog::new().set_directory(".").pick_file();
                 match world_path_option {
