@@ -88,7 +88,10 @@ pub fn main() -> Result<(), String> {
             let surface = window.surface(&event_pump)?;
 
             if save_bmp_image {
-                let file_path_option = FileDialog::new().set_directory(".").save_file();
+                let file_path_option = FileDialog::new()
+                    .set_directory(".")
+                    .add_filter("bmp", &["bmp"])
+                    .save_file();
                 match file_path_option {
                     Some(file_path) => {
                         surface.save_bmp(file_path)?;
@@ -105,7 +108,10 @@ pub fn main() -> Result<(), String> {
 
             save_bmp_image = false;
             if !world_loaded {
-                let world_path_option = FileDialog::new().set_directory(".").pick_file();
+                let world_path_option = FileDialog::new()
+                    .set_directory(".")
+                    .add_filter("json", &["json"])
+                    .pick_file();
                 match world_path_option {
                     Some(world_path) => {
                         fn load_world(world_path: PathBuf) -> anyhow::Result<World> {
