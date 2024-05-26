@@ -1,5 +1,5 @@
 [package]
-name = "simple-2d-rasterizer"
+name = "skean-splines-fun"
 version = "0.2.0"
 edition = "2021"
 

@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::Path;
 use std::process::exit;
 use std::{fs::File, io::BufReader};
 
@@ -15,6 +15,8 @@ mod pixel_grid;
 mod point_and_color;
 mod world;
 mod splines;
+
+const APP_NAME: &str = "Skean's Wonderful Bézier Emporium";
 
 // This belongs in some other file but I'm lazy...
 fn lerp(p0: Point2D, p1: Point2D, t: f64) -> Point2D {
@@ -34,7 +36,7 @@ pub fn main() -> Result<(), String> {
     let sdl_context = sdl2::init()?;
     let video_subsystem = sdl_context.video()?;
 
-    let window = video_subsystem
+    let mut window = video_subsystem
         .window("Basic 2D Rasterizer", res.width as u32, res.height as u32)
         .position_centered()
         .build()
@@ -85,28 +87,6 @@ pub fn main() -> Result<(), String> {
                 }
             }
 
-            let surface = window.surface(&event_pump)?;
-
-            if save_bmp_image {
-                let file_path_option = FileDialog::new()
-                    .set_directory(".")
-                    .add_filter("bmp", &["bmp"])
-                    .save_file();
-                match file_path_option {
-                    Some(file_path) => {
-                        surface.save_bmp(file_path)?;
-                    }
-                    None => show_simple_message_box(
-                        MessageBoxFlag::INFORMATION,
-                        "Invalid Path",
-                        "We didn't get a valid path back from the dialog box.",
-                        &window,
-                    )
-                    .unwrap(),
-                }
-            }
-
-            save_bmp_image = false;
             if !world_loaded {
                 let world_path_option = FileDialog::new()
                     .set_directory(".")
@@ -114,14 +94,17 @@ pub fn main() -> Result<(), String> {
                     .pick_file();
                 match world_path_option {
                     Some(world_path) => {
-                        fn load_world(world_path: PathBuf) -> anyhow::Result<World> {
+                        fn load_world(world_path: &Path) -> anyhow::Result<World> {
                             Ok(serde_json::from_reader(BufReader::new(File::open(
                                 world_path,
                             )?))?)
                         }
-                        match load_world(world_path) {
+                        match load_world(&world_path) {
                             Ok(w) => {
                                 world = Some(w);
+                                window
+                                    .set_title(&(world_path.file_name().expect("There was no file name in the path provided for the world, and yet we successfully loaded said world. Fascinating...").to_string_lossy() + " - " + APP_NAME))
+                                    .map_err(|e| e.to_string())?;
                                 world_loaded = true;
                                 let image_borrow = &image; // TODO: Show this to Jacob Cohen.
                                 s.spawn(move || world.unwrap().draw(image_borrow));
@@ -144,6 +127,29 @@ pub fn main() -> Result<(), String> {
                     .unwrap(),
                 }
             }
+
+            let surface = window.surface(&event_pump)?;
+
+            if save_bmp_image {
+                let file_path_option = FileDialog::new()
+                    .set_directory(".")
+                    .add_filter("bmp", &["bmp"])
+                    .save_file();
+                match file_path_option {
+                    Some(file_path) => {
+                        surface.save_bmp(file_path)?;
+                    }
+                    None => show_simple_message_box(
+                        MessageBoxFlag::INFORMATION,
+                        "Invalid Path",
+                        "We didn't get a valid path back from the dialog box.",
+                        &window,
+                    )
+                    .unwrap(),
+                }
+            }
+
+            save_bmp_image = false;
 
             put_something_on_the_goshdarn_screen(surface, &image)?;
 
