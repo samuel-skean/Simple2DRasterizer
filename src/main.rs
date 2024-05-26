@@ -41,6 +41,7 @@ pub fn main() -> Result<(), String> {
     let window = video_subsystem
         .window("Basic 2D Rasterizer", res.width as u32, res.height as u32)
         .position_centered()
+        .metal_view() // TODO: I think I'll need this?
         .build()
         .map_err(|e| e.to_string())?;
 
