@@ -117,7 +117,7 @@ pub fn main() -> Result<(), String> {
                             Ok(w) => {
                                 world = Some(w);
                                 world_loaded = true;
-                                let image_borrow = &image;
+                                let image_borrow = &image; // TODO: Show this to Jacob Cohen.
                                 s.spawn(move || world.unwrap().draw(image_borrow));
                             }
                             Err(e) => show_simple_message_box(
