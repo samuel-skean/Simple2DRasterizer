@@ -25,7 +25,10 @@ impl Draw for LineSegment {
             let t = integral_t as f64 / LERP_RESOLUTION_FOR_LINE_SEGMENTS as f64;
             let point_on_line = lerp(self.p.0, self.p.1, t);
             point_on_line.draw_specifying_color(target, self.color);
-            std::thread::sleep(Duration::from_millis(1));
+
+            if cfg!(feature = "leisurely-drawing") {
+                std::thread::sleep(Duration::from_millis(1));
+            }
         }
     }
 }

@@ -12,7 +12,8 @@
                 "args": [
                     "build",
                     "--bin=simple-2d-rasterizer",
-                    "--package=simple-2d-rasterizer"
+                    "--package=simple-2d-rasterizer",
+                    "--features=step-by-step-curves-and-lines"
                 ],
                 "filter": {
                     "name": "simple-2d-rasterizer",

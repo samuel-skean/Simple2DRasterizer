@@ -32,7 +32,14 @@ impl Draw for QuadraticBezierCurve {
             );
 
             point_on_curve.draw_specifying_color(target, self.color);
-            std::thread::sleep(Duration::from_micros(200));
+
+            if cfg!(feature = "leisurely-drawing") {
+                std::thread::sleep(Duration::from_micros(200));
+            }
+        }
+
+        if cfg!(feature = "step-by-step-curves-and-lines") {
+            std::thread::sleep(Duration::from_millis(100)); // TODO: Somehow ensure this is higher than the current frame-time!
         }
     }
 }
@@ -61,8 +68,14 @@ impl Draw for CubicBezierCurve {
             let point_on_curve = lerp(point_on_first_lerp, point_on_second_lerp, t);
 
             point_on_curve.draw_specifying_color(target, self.color);
-            std::thread::sleep(Duration::from_micros(200));
 
+            if cfg!(feature = "leisurely-drawing") {
+                std::thread::sleep(Duration::from_micros(200));
+            }
+        }
+
+        if cfg!(feature = "step-by-step-curves-and-lines") {
+            std::thread::sleep(Duration::from_millis(100)); // TODO: Somehow ensure this is higher than the current frame-time!
         }
     }
 }
