@@ -1,7 +1,10 @@
 use serde::{Deserialize, Serialize};
 
 use crate::PixelGrid;
-use std::{ops::{Add, Mul}, sync::atomic::{AtomicU8, Ordering::*}};
+use std::{
+    ops::{Add, Mul},
+    sync::atomic::{AtomicU8, Ordering::*},
+};
 
 #[derive(Clone, Copy, Deserialize, Serialize)]
 pub struct Point2D(pub f64, pub f64); // A point in 2d space, represented as (x, y), with (0, 0) as the upper-left corner.
@@ -26,13 +29,21 @@ impl From<Color> for ShareableColor {
 
 impl From<ShareableColor> for Color {
     fn from(value: ShareableColor) -> Self {
-        Color(value.0.into_inner(), value.1.into_inner(), value.2.into_inner())
+        Color(
+            value.0.into_inner(),
+            value.1.into_inner(),
+            value.2.into_inner(),
+        )
     }
 }
 
 impl From<&ShareableColor> for sdl2::pixels::Color {
     fn from(value: &ShareableColor) -> Self {
-        sdl2::pixels::Color::RGB(value.0.load(Acquire), value.1.load(Acquire), value.2.load(Acquire))
+        sdl2::pixels::Color::RGB(
+            value.0.load(Acquire),
+            value.1.load(Acquire),
+            value.2.load(Acquire),
+        )
     }
 }
 

@@ -16,7 +16,7 @@ impl PixelGrid {
         for j in 0..res.height {
             grid.0.push(Vec::new());
             for _ in 0..res.width {
-                grid.0[j].push(Color(0,0,0).into())
+                grid.0[j].push(Color(0, 0, 0).into())
             }
         }
         grid
@@ -33,7 +33,13 @@ impl PixelGrid {
         // PPM Body
         for scanline in &self.0 {
             for pixel in scanline {
-                write!(dest, "{} {} {} ", pixel.0.load(Acquire), pixel.1.load(Acquire), pixel.2.load(Acquire))?;
+                write!(
+                    dest,
+                    "{} {} {} ",
+                    pixel.0.load(Acquire),
+                    pixel.1.load(Acquire),
+                    pixel.2.load(Acquire)
+                )?;
             }
             writeln!(dest, "")?;
         }

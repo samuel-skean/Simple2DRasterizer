@@ -44,7 +44,6 @@ impl Draw for QuadraticBezierCurve {
     }
 }
 
-
 #[derive(Deserialize, Serialize)]
 pub struct CubicBezierCurve {
     #[serde(rename = "points")]
@@ -62,8 +61,16 @@ impl Draw for CubicBezierCurve {
             let point_on_segment_from_p1_to_p2 = lerp(self.p.1, self.p.2, t);
             let point_on_segment_from_p2_to_p3 = lerp(self.p.2, self.p.3, t);
 
-            let point_on_first_lerp = lerp(point_on_segment_from_p0_to_p1, point_on_segment_from_p1_to_p2, t);
-            let point_on_second_lerp = lerp(point_on_segment_from_p1_to_p2, point_on_segment_from_p2_to_p3, t);
+            let point_on_first_lerp = lerp(
+                point_on_segment_from_p0_to_p1,
+                point_on_segment_from_p1_to_p2,
+                t,
+            );
+            let point_on_second_lerp = lerp(
+                point_on_segment_from_p1_to_p2,
+                point_on_segment_from_p2_to_p3,
+                t,
+            );
 
             let point_on_curve = lerp(point_on_first_lerp, point_on_second_lerp, t);
 

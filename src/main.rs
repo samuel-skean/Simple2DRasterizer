@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 use std::process::exit;
+use std::sync::{Arc, RwLock};
 use std::{fs::File, io::BufReader};
 
 use pixel_grid::Resolution;
@@ -13,8 +14,8 @@ mod draw;
 mod line_segment;
 mod pixel_grid;
 mod point_and_color;
-mod world;
 mod splines;
+mod world;
 
 // This belongs in some other file but I'm lazy...
 fn lerp(p0: Point2D, p1: Point2D, t: f64) -> Point2D {
@@ -24,6 +25,28 @@ fn lerp(p0: Point2D, p1: Point2D, t: f64) -> Point2D {
 use sdl2::event::Event;
 use sdl2::keyboard::{self, Keycode};
 use std::time::Duration;
+
+impl Draw for RwLock<Option<World>> {
+    fn draw(&self, target: &PixelGrid) {
+        while self.read().unwrap().is_none() {
+            std::thread::sleep(Duration::from_millis(10));
+        }
+
+        self.read().unwrap().as_ref().unwrap().draw(target);
+    }
+
+    // I really *don't* intend anyone to ever serialize or deserialize this -
+    // not that it'd be awful.
+    #[doc(hidden)]
+    fn typetag_name(&self) -> &'static str {
+        unimplemented!();
+    }
+
+    #[doc(hidden)]
+    fn typetag_deserialize(&self) {
+        unimplemented!();
+    }
+}
 
 pub fn main() -> Result<(), String> {
     let res = Resolution {
@@ -42,38 +65,9 @@ pub fn main() -> Result<(), String> {
 
     let image: PixelGrid = PixelGrid::new(res);
 
-    let world = loop {
-        let world_path_option = FileDialog::new().set_directory(".").pick_file();
-        match world_path_option {
-            Some(world_path) => {
-                fn load_world(world_path: PathBuf) -> anyhow::Result<World> {
-                    Ok(serde_json::from_reader(BufReader::new(File::open(
-                        world_path,
-                    )?))?)
-                }
-                match load_world(world_path) {
-                    Ok(world) => break world,
-                    Err(e) => show_simple_message_box(
-                        MessageBoxFlag::INFORMATION,
-                        "Invalid World File",
-                        e.to_string().as_str(),
-                        &window,
-                    )
-                    .unwrap(),
-                };
-            }
-            None => show_simple_message_box(
-                MessageBoxFlag::INFORMATION,
-                "Invalid Path",
-                "We didn't get a valid path back from the message box.",
-                &window,
-            )
-            .unwrap(),
-        }
-    };
+    let world: Arc<RwLock<Option<World>>> = Arc::new(None.into());
 
-
-    // I'm super happy about scoped threads since they let me do what I want at 
+    // I'm super happy about scoped threads since they let me do what I want at
     // all, very easily... but I'm not too happy about this extra indentation.
     std::thread::scope(|s| -> Result<(), String> {
         s.spawn(|| world.draw(&image));
@@ -84,6 +78,7 @@ pub fn main() -> Result<(), String> {
         put_something_on_the_goshdarn_screen(surface, &image)?;
 
         let mut save_file = false;
+        let mut no_world_loaded = true;
 
         loop {
             for event in event_pump.poll_iter() {
@@ -122,6 +117,39 @@ pub fn main() -> Result<(), String> {
                 }
             }
 
+            if no_world_loaded {
+                let world_path_option = FileDialog::new().set_directory(".").pick_file();
+                match world_path_option {
+                    Some(world_path) => {
+                        fn load_world(world_path: PathBuf) -> anyhow::Result<World> {
+                            Ok(serde_json::from_reader(BufReader::new(File::open(
+                                world_path,
+                            )?))?)
+                        }
+                        match load_world(world_path) {
+                            Ok(w) => {
+                                *world.write().unwrap() = Some(w);
+                                no_world_loaded = false;
+                            },
+                            Err(e) => show_simple_message_box(
+                                MessageBoxFlag::INFORMATION,
+                                "Invalid World File",
+                                e.to_string().as_str(),
+                                &window,
+                            )
+                            .unwrap(),
+                        };
+                    }
+                    None => show_simple_message_box(
+                        MessageBoxFlag::INFORMATION,
+                        "Invalid Path",
+                        "We didn't get a valid path back from the message box.",
+                        &window,
+                    )
+                    .unwrap(),
+                }
+            }
+
             save_file = false;
 
             put_something_on_the_goshdarn_screen(surface, &image)?;
@@ -129,7 +157,8 @@ pub fn main() -> Result<(), String> {
             std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
             // The rest of the game loop goes here...
         }
-    }).and_then(|_| {
+    })
+    .and_then(|_| {
         image.save_as_ppm(&mut std::io::stdout()).unwrap();
         Ok(())
     })
