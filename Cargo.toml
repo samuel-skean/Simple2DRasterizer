@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.86"
+clap = { version = "4.5.4", features = ["derive"] }
 itertools = "0.13.0"
 rfd = "0.14.1" # TODO: This guy keeps putting things on standard err. Stop it! Or at least learn how.
 sdl2 = { version = "0.36.0", features = ["bundled", "static-link"] }
@@ -18,3 +19,4 @@ typetag = "0.2.16"
 default = ["leisurely-drawing"]
 leisurely-drawing = []             # Draw things slooowly.
 step-by-step-curves-and-lines = [] # Pause just a little after drawing each curve and line.
+interactive-alerts-about-args = [] # Show graphical alerts for errors caused by arguments specified on the command line instead of just terminating.

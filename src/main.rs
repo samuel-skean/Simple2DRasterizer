@@ -1,10 +1,12 @@
-use std::path::Path;
-use std::process::exit;
+use std::io::BufWriter;
+use std::path::{Path, PathBuf};
+use std::thread::ScopedJoinHandle;
 use std::{fs::File, io::BufReader};
 
+use clap::Parser;
+use user_interaction_helpers::*;
 use pixel_grid::Resolution;
-use rfd::FileDialog;
-use sdl2::messagebox::{show_simple_message_box, MessageBoxFlag};
+use sdl2::messagebox::MessageBoxFlag;
 
 use crate::{draw::Draw, pixel_grid::PixelGrid, point_and_color::Point2D, world::World};
 
@@ -15,6 +17,7 @@ mod pixel_grid;
 mod point_and_color;
 mod world;
 mod splines;
+mod user_interaction_helpers;
 
 const APP_NAME: &str = "Skean's Wonderful Bézier Emporium";
 
@@ -27,7 +30,63 @@ use sdl2::event::Event;
 use sdl2::keyboard::{self, Keycode};
 use std::time::Duration;
 
+#[derive(Parser, Clone)]
+struct Cli {
+    /// Where are you loading the world from? If you don't supply one here, you
+    /// will be asked for one interactively.
+    world_path: Option<PathBuf>,
+    /// Where do you want to put the image? Both .bmp files and .ppm files are
+    /// supported. If you do not supply one, the image will have to be saved
+    /// interactively with Ctrl+S (sorry, mac users).
+    #[arg(short, long)]
+    output_path: Option<PathBuf>,
+}
+
+impl Cli {
+    // It really *felt* like `arg(value_parser = [expr])` (link to documentation
+    // here: https://docs.rs/clap/latest/clap/_derive/index.html#arg-attributes)
+    // would be perfect, but it seems to be about actually parsing things from
+    // strings in arbitrary ways, not validating them. And in fact, it really
+    // seems it should be possible with TypedValueParser::map, but I'm unable to
+    // get there because it seems Option<PathBuf> does not implement ValueEnum,
+    // which just seems wrong - clap has lots of good support for Options of
+    // many things, including of PathBufs. Here's the full message:
+    // ```
+    // error[E0277]: the trait bound `std::option::Option<PathBuf>: ValueEnum` is not satisfied
+    //     --> src/main.rs:43:56
+    //     |
+    // 43   |     #[arg(short, long, value_parser = ValueParser::new(EnumValueParser::<Option<PathBuf>>::new()))]
+    //     |                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the trait `ValueEnum` is not implemented for `std::option::Option<PathBuf>`
+    //     |
+    //     = help: the trait `ValueEnum` is implemented for `ColorChoice`
+    // note: required by a bound in `EnumValueParser`
+    //    --> /Users/samuelskean/.cargo/registry/src/index.crates.io-6f17d22bba15001f/clap_builder-4.5.2/src/builder/value_parser.rs:1117:31
+    //     |
+    // 1117 | pub struct EnumValueParser<E: crate::ValueEnum + Clone + Send + Sync + 'static>(
+    //     |                               ^^^^^^^^^^^^^^^^ required by this bound in `EnumValueParser`
+    // ```
+    // The above error message refers to no code in version control - I deleted it for cleanliness (and out of shame lol).
+
+    // In the meantime, I guess, you better call this method on all *one* instances of Cli! Or else!
+    fn validate(&self) -> Self {
+        let extension = self.output_path.as_ref().map(|output_path| output_path.extension()).flatten();
+        if extension.is_some_and(|e| e == "ppm" || e == "bmp") {
+            self.clone() // TODO: Remove this `clone()` with a static, or a LazyCell, or something.
+        } else {
+            Cli {
+                output_path: None,
+                // Yay, my very first usage of struct update syntax! I
+                // remembered the syntax without looking it up too, which speaks
+                // well of it.
+                .. self.clone()
+            }
+        }
+    }
+}
+
 pub fn main() -> Result<(), String> {
+    let mut config = Cli::parse().validate();
+
     let res = Resolution {
         width: 400,
         height: 400,
@@ -37,7 +96,7 @@ pub fn main() -> Result<(), String> {
     let video_subsystem = sdl_context.video()?;
 
     let mut window = video_subsystem
-        .window("Basic 2D Rasterizer", res.width as u32, res.height as u32)
+        .window(APP_NAME, res.width as u32, res.height as u32)
         .position_centered()
         .build()
         .map_err(|e| e.to_string())?;
@@ -53,112 +112,193 @@ pub fn main() -> Result<(), String> {
     // whatever, and realize that my flag variable world_loaded has a special
     // role in the loop.
     #[allow(unused_assignments)]
-    // Starts out not existing - it starts to exist once it's loaded, further
-    // down:
-    let mut world: Option<World> = None;
+    // TODO: Consider applying method wizardry here. This is a little
+    // pyramid-of-doom-y as it stands, but at least it's understandable like
+    // this:
+    let mut world: Option<World> = match config.world_path {
+        Some(ref world_path) => {
+            let load_world_result = load_world(&world_path);
+            match load_world_result {
+                Ok(world) => Some(world),
+                // TODO: Get rid of the ugly instanceof (anyhow::Error::is, in this case, but still):
+                Err(e) if e.is::<std::io::Error>() => {
+                    alert_about_io_error_with_world_file(true, e, &window);
+                    config.world_path = None;
+                    None
+                }
+                Err(e) => {
+                    alert_about_invalid_world_file(true, e, &window);
+                    config.world_path = None;
+                    None
+                },
+            }
+        },
+        None => None,
+    };
 
-    // I'm super happy about scoped threads since they let me do what I want at 
+    // I'm super happy about scoped threads since they let me do what I want at
     // all, very easily... but I'm not too happy about this extra indentation.
     std::thread::scope(|s| -> Result<(), String> {
+        let mut drawing_thread: Option<ScopedJoinHandle<()>> = None;
         let mut event_pump = sdl_context.event_pump()?;
         let surface = window.surface(&event_pump)?;
 
         put_something_on_the_goshdarn_screen(surface, &image)?;
 
-        let mut save_bmp_image = false;
+        let mut save_image = false;
         let mut world_loaded = false;
 
-        loop {
-            for event in event_pump.poll_iter() {
+        // TODO: Attempt to use `unreachable!` as a cleaner way of telling the
+        // compiler about how this loop terminates. Maybe it fixes weird
+        // borrowing issues with the `world` local variable, without all the
+        // crazy crap we have to do here? I haven't thought it through, but it
+        // sure *sounds* cool.
+        // Documentation for `unreachable!` macro:
+        // https://doc.rust-lang.org/std/macro.unreachable.html
+        'event_loop: loop {
+            'inner_loop: for event in event_pump.poll_iter() {
                 match event {
                     Event::Quit { .. }
                     | Event::KeyDown {
                         keycode: Some(Keycode::Escape),
                         ..
-                    } => exit(0),
+                    } => {
+                        if let Some(ref drawing_thread) = drawing_thread {
+                            if !drawing_thread.is_finished() && config.output_path.is_some() {
+                                // TODO: Improve this warning message with information about what happens with each of the kinds of images that can be saved.
+                                let quit_anyway = confer_with_user(
+                                    AlertKind::WARNING,
+                                    "Unfinished Work",
+                                    "Are you sure you want to quit? The drawing thread isn't finished!\nWho knows what image you're saving, I haven't bothered to figure it out.",
+                                    &window,
+                                    "Cancel",
+                                    "Save and Quit Now"
+                                );
+                                if quit_anyway {
+                                    break 'event_loop;
+                                } else {
+                                    continue 'inner_loop;
+                                }
+                            }
+                        }
+                        break 'event_loop;
+                    },
                     Event::KeyDown {
                         keycode: Some(Keycode::S),
                         keymod: keyboard::Mod::LCTRLMOD,
                         ..
                     } => {
-                        save_bmp_image = true;
+                        save_image = true;
                     }
                     _ => {}
                 }
             }
 
             if !world_loaded {
-                let world_path_option = FileDialog::new()
-                    .set_directory(".")
-                    .add_filter("json", &["json"])
-                    .pick_file();
+                let world_path_option = config.world_path.clone().or_else(|| file_dialog(&["json"]).pick_file());
                 match world_path_option {
                     Some(world_path) => {
-                        fn load_world(world_path: &Path) -> anyhow::Result<World> {
-                            Ok(serde_json::from_reader(BufReader::new(File::open(
-                                world_path,
-                            )?))?)
-                        }
                         match load_world(&world_path) {
                             Ok(w) => {
                                 world = Some(w);
                                 window
-                                    .set_title(&(world_path.file_name().expect("There was no file name in the path provided for the world, and yet we successfully loaded said world. Fascinating...").to_string_lossy() + " - " + APP_NAME))
+                                    .set_title(
+                                        &(world_path.file_name().expect("There was no file name in the path provided for the world, and yet we successfully loaded said world. Fascinating...").to_string_lossy() + " - " + APP_NAME)
+                                    )
                                     .map_err(|e| e.to_string())?;
                                 world_loaded = true;
                                 let image_borrow = &image; // TODO: Show this to Jacob Cohen.
-                                s.spawn(move || world.unwrap().draw(image_borrow));
+                                drawing_thread = Some(s.spawn(move || world.unwrap().draw(image_borrow)));
                             }
-                            Err(e) => show_simple_message_box(
-                                MessageBoxFlag::INFORMATION,
-                                "Invalid World File",
-                                e.to_string().as_str(),
-                                &window,
-                            )
-                            .unwrap(),
+                            // TODO: Get rid of the ugly instanceof (anyhow::Error::is, in this case, but still):
+                            Err(e) if e.is::<std::io::Error>() => {
+                                alert_about_io_error_with_world_file(false, e, &window);
+                                config.world_path = None;
+                            }
+                            Err(e) => alert_about_invalid_world_file(false, e, &window),
                         };
                     }
-                    None => show_simple_message_box(
-                        MessageBoxFlag::INFORMATION,
-                        "Invalid Path",
-                        "We didn't get a valid path back from the message box.",
-                        &window,
-                    )
-                    .unwrap(),
+                    None => report_file_dialog_failure(&window),
                 }
             }
 
             let surface = window.surface(&event_pump)?;
 
-            if save_bmp_image {
-                let file_path_option = FileDialog::new()
-                    .set_directory(".")
-                    .add_filter("bmp", &["bmp"])
-                    .save_file();
+            if save_image {
+                let file_path_option = file_dialog(&["bmp", "ppm"]).save_file();
                 match file_path_option {
                     Some(file_path) => {
-                        surface.save_bmp(file_path)?;
+                        save_image_file(file_path, &image, &window, &surface)?;
                     }
-                    None => show_simple_message_box(
-                        MessageBoxFlag::INFORMATION,
-                        "Invalid Path",
-                        "We didn't get a valid path back from the dialog box.",
-                        &window,
-                    )
-                    .unwrap(),
+                    None => report_file_dialog_failure(&window),
                 }
             }
 
-            save_bmp_image = false;
+            save_image = false;
 
             put_something_on_the_goshdarn_screen(surface, &image)?;
 
             std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
             // The rest of the game loop goes here...
         }
-    }).and_then(|_| {
-        image.save_as_ppm(&mut std::io::stdout()).unwrap();
-        Ok(())
+
+        match config.output_path {
+            Some(file_path) if file_path.to_string_lossy() == "-" => {
+                image.save_as_ppm(&mut std::io::stdout()).unwrap();
+            }
+            Some(file_path) => {
+                let surface = window.surface(&event_pump)?;
+                save_image_file(file_path, &image, &window, &surface)?;
+            }
+            _ => {
+                eprintln!("INFORMATION: No (valid) location to save was specified on the command line, so no image was saved.");
+            }
+        };
+
+        // This is the nicest way I've found to forcibly kill any running
+        // background threads.
+        std::process::exit(0);
+    })
+}
+
+fn load_world(world_path: &Path) -> anyhow::Result<World> {
+    Ok(serde_json::from_reader(BufReader::new(File::open(
+        world_path,
+    )?))?)
+}
+
+// TODO: Change this function to account for the fact that it *may* be called to
+// save the image in any circumstance, whether the path was specified on the
+// command line or graphically.
+fn save_image_file(file_path: PathBuf, image: &PixelGrid, window: &sdl2::video::Window, surface: &sdl2::video::WindowSurfaceRef) -> Result<(), String> {
+    Ok(match file_path.extension() {
+        Some(s) if s == "ppm" => {
+            if confer_with_user(
+                MessageBoxFlag::WARNING,
+                "Warning",
+                "This might not do what you expect. This saves the image that has currently been created, not the image that is currently on the screen.",
+                window,
+                "Cancel",
+                "Save"
+            ) {
+                image.save_as_ppm(
+                    &mut BufWriter::new(
+                        File::create(file_path).map_err(|e| e.to_string())?)
+                )
+                    .map_err(|e| e.to_string())?;
+            }
+        }
+        Some(s) if s == "bmp" => {
+            surface.save_bmp(file_path)?;
+        }
+        _ => {
+            alert(
+                false,
+                MessageBoxFlag::ERROR,
+                "How on Earth Did We Get Here",
+                "You gave me a filename with an extension I don't support, I think through the GUI. How dare you?! (I only support .bmp and .ppm files for saving, btw).",
+                window);
+        }
     })
 }
 
@@ -168,7 +308,7 @@ fn put_something_on_the_goshdarn_screen(
 ) -> Result<(), String> {
     let surface_slice: &mut [u32] = unsafe {
         // Look ma! A silly little bit of unsafe!
-        std::mem::transmute(
+        std::mem::transmute( // TODO: Audit this, specifically for what happens to the size of the slice.
             surface
                 .without_lock_mut()
                 .ok_or("Unable to write to the surface.")?,

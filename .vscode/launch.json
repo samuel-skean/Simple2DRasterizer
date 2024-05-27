@@ -21,7 +21,7 @@
                     "kind": "bin"
                 }
             },
-            "args": [],
+            "args": ["sample_world.json"],
             "cwd": "${workspaceFolder}"
         },
         {
@@ -33,7 +33,7 @@
                     "test",
                     "--no-run",
                     "--bin=skean-splines-fun",
-                    "--package=skean-splines-fun"
+                    "--package=skean-splines-fun",
                 ],
                 "filter": {
                     "name": "skean-splines-fun",
