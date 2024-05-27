@@ -4,9 +4,9 @@ use std::thread::ScopedJoinHandle;
 use std::{fs::File, io::BufReader};
 
 use clap::Parser;
-use user_interaction_helpers::*;
 use pixel_grid::Resolution;
 use sdl2::messagebox::MessageBoxFlag;
+use user_interaction_helpers::*;
 
 use crate::{draw::Draw, pixel_grid::PixelGrid, point_and_color::Point2D, world::World};
 
@@ -15,9 +15,9 @@ mod draw;
 mod line_segment;
 mod pixel_grid;
 mod point_and_color;
-mod world;
 mod splines;
 mod user_interaction_helpers;
+mod world;
 
 const APP_NAME: &str = "Skean's Wonderful Bézier Emporium";
 
@@ -69,7 +69,11 @@ impl Cli {
 
     // In the meantime, I guess, you better call this method on all *one* instances of Cli! Or else!
     fn validate(&self) -> Self {
-        let extension = self.output_path.as_ref().map(|output_path| output_path.extension()).flatten();
+        let extension = self
+            .output_path
+            .as_ref()
+            .map(|output_path| output_path.extension())
+            .flatten();
         if extension.is_some_and(|e| e == "ppm" || e == "bmp") {
             self.clone() // TODO: Remove this `clone()` with a static, or a LazyCell, or something.
         } else {
@@ -78,7 +82,7 @@ impl Cli {
                 // Yay, my very first usage of struct update syntax! I
                 // remembered the syntax without looking it up too, which speaks
                 // well of it.
-                .. self.clone()
+                ..self.clone()
             }
         }
     }
@@ -130,9 +134,9 @@ pub fn main() -> Result<(), String> {
                     alert_about_invalid_world_file(true, e, &window);
                     config.world_path = None;
                     None
-                },
+                }
             }
-        },
+        }
         None => None,
     };
 
@@ -182,7 +186,7 @@ pub fn main() -> Result<(), String> {
                             }
                         }
                         break 'event_loop;
-                    },
+                    }
                     Event::KeyDown {
                         keycode: Some(Keycode::S),
                         keymod: keyboard::Mod::LCTRLMOD,
@@ -195,7 +199,10 @@ pub fn main() -> Result<(), String> {
             }
 
             if !world_loaded {
-                let world_path_option = config.world_path.clone().or_else(|| file_dialog(&["json"]).pick_file());
+                let world_path_option = config
+                    .world_path
+                    .clone()
+                    .or_else(|| file_dialog(&["json"]).pick_file());
                 match world_path_option {
                     Some(world_path) => {
                         match load_world(&world_path) {
@@ -208,7 +215,8 @@ pub fn main() -> Result<(), String> {
                                     .map_err(|e| e.to_string())?;
                                 world_loaded = true;
                                 let image_borrow = &image; // TODO: Show this to Jacob Cohen.
-                                drawing_thread = Some(s.spawn(move || world.unwrap().draw(image_borrow)));
+                                drawing_thread =
+                                    Some(s.spawn(move || world.unwrap().draw(image_borrow)));
                             }
                             // TODO: Get rid of the ugly instanceof (anyhow::Error::is, in this case, but still):
                             Err(e) if e.is::<std::io::Error>() => {
@@ -270,7 +278,12 @@ fn load_world(world_path: &Path) -> anyhow::Result<World> {
 // TODO: Change this function to account for the fact that it *may* be called to
 // save the image in any circumstance, whether the path was specified on the
 // command line or graphically.
-fn save_image_file(file_path: PathBuf, image: &PixelGrid, window: &sdl2::video::Window, surface: &sdl2::video::WindowSurfaceRef) -> Result<(), String> {
+fn save_image_file(
+    file_path: PathBuf,
+    image: &PixelGrid,
+    window: &sdl2::video::Window,
+    surface: &sdl2::video::WindowSurfaceRef,
+) -> Result<(), String> {
     Ok(match file_path.extension() {
         Some(s) if s == "ppm" => {
             if confer_with_user(
@@ -308,7 +321,8 @@ fn put_something_on_the_goshdarn_screen(
 ) -> Result<(), String> {
     let surface_slice: &mut [u32] = unsafe {
         // Look ma! A silly little bit of unsafe!
-        std::mem::transmute( // TODO: Audit this, specifically for what happens to the size of the slice.
+        std::mem::transmute(
+            // TODO: Audit this, specifically for what happens to the size of the slice.
             surface
                 .without_lock_mut()
                 .ok_or("Unable to write to the surface.")?,

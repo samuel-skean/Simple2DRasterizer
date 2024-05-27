@@ -22,7 +22,13 @@ const fn we_are_alerting_through_the_gui(from_arg: bool) -> bool {
 }
 /// Report non-fatal error or warning through both the GUI and stderr,
 /// respecting the compilation flag interactive-alerts-about-args.
-pub fn alert(from_arg: bool, kind: AlertKind, title: &str, message: &str, window: &sdl2::video::Window) {
+pub fn alert(
+    from_arg: bool,
+    kind: AlertKind,
+    title: &str,
+    message: &str,
+    window: &sdl2::video::Window,
+) {
     report_alert_on_only_command_line(kind, message);
     if we_are_alerting_through_the_gui(from_arg) {
         eprintln!("This needs your attention on the currently open window.");
@@ -30,7 +36,6 @@ pub fn alert(from_arg: bool, kind: AlertKind, title: &str, message: &str, window
     } else {
         std::process::exit(1); // TODO: Make this a graceful shutdown w.r.t. the window.
     }
-
 }
 
 fn report_alert_on_only_command_line(kind: AlertKind, message: &str) {
@@ -151,7 +156,7 @@ pub fn alert_about_io_error_with_world_file(
         error,
         message_before_error,
         world_file_message_after_error(specified_as_arg),
-        &window
+        &window,
     );
 }
 
