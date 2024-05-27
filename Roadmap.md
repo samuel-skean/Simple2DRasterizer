@@ -53,7 +53,7 @@ Known deficiencies (highest priority listed first):
   - Fix it? There be dragons - mostly in the form of atomics.
   - Attempt to observe any difference in performance caused by fixing it.
 
-- The hot dog color scheme does not appear on macOS. It is unknown on which
-  platforms it does appear.
+- The hot dog color scheme does not appear on macOS or Fedora Asahi Remix 39 (under
+  either Wayland or X11). It is unknown on which platforms it does appear.
   Next steps:
   - Weep.
