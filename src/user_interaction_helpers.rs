@@ -45,7 +45,7 @@ fn report_alert_on_only_command_line(kind: AlertKind, message: &str) {
 
 #[must_use]
 pub fn confer_with_user(
-    kind: MessageBoxFlag,
+    kind: AlertKind,
     title: &str,
     message: &str,
     window: &sdl2::video::Window,
@@ -66,7 +66,7 @@ pub fn confer_with_user(
         button_id: 1,
         text: confirmation_button_name,
     };
-    let buttons = [cancel_button, save_button];
+    let buttons = [save_button, cancel_button];
     let color_scheme = MessageBoxColorScheme {
         background: (255, 255, 255),
         text: (0, 0, 0),
@@ -78,7 +78,7 @@ pub fn confer_with_user(
         .expect("Displaying a fancy message box failed.");
 
     match message_box_answer {
-        ClickedButton::CustomButton(b) if b.button_id == buttons[1].button_id => true,
+        ClickedButton::CustomButton(b) if b.button_id == buttons[0].button_id => true,
         ClickedButton::CustomButton(_) | ClickedButton::CloseButton => false,
     }
 }
