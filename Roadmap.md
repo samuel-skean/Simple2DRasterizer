@@ -46,10 +46,10 @@ Known deficiencies (highest priority listed first):
     around for ways to make it cleaner. This bit I am curious about.
 
 - Drawing to the screen involves copying the entire image in my code. This is
-  not ideal, and it would be interesting to solve it and attempt to measure it's
-  effects. 
-  NOTE: Fixing this will likely change how bmps are saved while the
-  image is being drawn, perhaps by making it meaningless.
+  not ideal, and it would be interesting to avoid it and attempt to measure the
+  change's effects.
+  NOTE: Fixing this will likely change how bmps are saved while the image is
+  being drawn, perhaps by making it meaningless.
   Next steps:
   - Fix it? There be dragons - mostly in the form of atomics.
   - Attempt to observe any difference in performance caused by fixing it.
