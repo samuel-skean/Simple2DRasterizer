@@ -1,3 +1,8 @@
+Feature Ideas:
+- Save to multiple images at once, specified on the command line or via the GUI.
+
+- Shuffle the order in which splines are drawn. Attribution: Jacob Cohen
+
 Known deficiencies (highest priority listed first):
 - The resolution cannot be specified.
   Next steps:
@@ -39,10 +44,6 @@ Known deficiencies (highest priority listed first):
     it's been very tedious just *writing* it.
   - Try to structure it better? I doubt there's a silver bullet, but I'll ask
     around for ways to make it cleaner. This bit I am curious about.
-
-- The program doesn't handle saving to multiple images at once.
-  Next steps:
-  - Implement this so it works from both the command line and the GUI.
 
 - Drawing to the screen involves copying the entire image in my code. This is
   not ideal, and it would be interesting to solve it and attempt to measure it's
