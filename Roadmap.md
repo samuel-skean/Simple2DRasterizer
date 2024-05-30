@@ -3,6 +3,8 @@ Feature Ideas:
 
 - Shuffle the order in which splines are drawn. Attribution: Jacob Cohen
 
+- Indicate, on the command line, the option chosen through graphical prompts.
+
 Known deficiencies (highest priority listed first):
 - The resolution cannot be specified.
   Next steps:
@@ -53,6 +55,9 @@ Known deficiencies (highest priority listed first):
   Next steps:
   - Fix it? There be dragons - mostly in the form of atomics.
   - Attempt to observe any difference in performance caused by fixing it.
+
+- The `interactive-alerts-about-args` feature is poorly documented - if you can
+  even call it documented.
 
 - The hot dog color scheme does not appear on macOS or Fedora Asahi Remix 39 (under
   either Wayland or X11). It is unknown on which platforms it does appear.
