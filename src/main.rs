@@ -88,7 +88,7 @@ impl Cli {
     }
 }
 
-pub fn main() -> Result<(), String> {
+pub fn main() {
     let mut config = Cli::parse().validate();
 
     let res = Resolution {
@@ -96,14 +96,14 @@ pub fn main() -> Result<(), String> {
         height: 400,
     };
 
-    let sdl_context = sdl2::init()?;
-    let video_subsystem = sdl_context.video()?;
+    let sdl_context = sdl2::init().unwrap();
+    let video_subsystem = sdl_context.video().unwrap();
 
     let mut window = video_subsystem
         .window(APP_NAME, res.width as u32, res.height as u32)
         .position_centered()
         .build()
-        .map_err(|e| e.to_string())?;
+        .unwrap();
 
     let image: PixelGrid = PixelGrid::new(res);
 
@@ -142,12 +142,12 @@ pub fn main() -> Result<(), String> {
 
     // I'm super happy about scoped threads since they let me do what I want at
     // all, very easily... but I'm not too happy about this extra indentation.
-    std::thread::scope(|s| -> Result<(), String> {
+    std::thread::scope(|s| {
         let mut drawing_thread: Option<ScopedJoinHandle<()>> = None;
-        let mut event_pump = sdl_context.event_pump()?;
-        let surface = window.surface(&event_pump)?;
+        let mut event_pump = sdl_context.event_pump().unwrap();
+        let surface = window.surface(&event_pump).unwrap();
 
-        put_something_on_the_goshdarn_screen(surface, &image)?;
+        put_something_on_the_goshdarn_screen(surface, &image).unwrap();
 
         let mut save_image = false;
         let mut world_loaded = false;
@@ -214,7 +214,7 @@ pub fn main() -> Result<(), String> {
                         The application will quit when you dismiss this pop-up.",
                         &window,
                     );
-                    return Ok(());
+                    return;
                 };
                 match load_world(&world_path) {
                     Ok(w) => {
@@ -223,7 +223,7 @@ pub fn main() -> Result<(), String> {
                             .set_title(
                                 &(world_path.file_name().expect("There was no file name in the path provided for the world, and yet we successfully loaded said world. Fascinating...").to_string_lossy() + " - " + APP_NAME)
                             )
-                            .map_err(|e| e.to_string())?;
+                            .unwrap();
                         world_loaded = true;
                         let image_borrow = &image; // TODO: Show this to Jacob Cohen.
                         drawing_thread =
@@ -240,7 +240,7 @@ pub fn main() -> Result<(), String> {
                 };
             }
 
-            let surface = window.surface(&event_pump)?;
+            let surface = window.surface(&event_pump).unwrap();
 
             // REVISIT: This following block (inside the if statement) doesn't
             // conceptually need to have the complicated control flow it does as
@@ -264,12 +264,12 @@ pub fn main() -> Result<(), String> {
                     continue 'event_loop;
                     // Do not quit the program in this case.
                 };
-                save_image_file(file_path, &image, &window, &surface)?;
+                save_image_file(file_path, &image, &window, &surface).unwrap();
             }
 
             save_image = false;
 
-            put_something_on_the_goshdarn_screen(surface, &image)?;
+            put_something_on_the_goshdarn_screen(surface, &image).unwrap();
 
             std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
         }
@@ -279,8 +279,8 @@ pub fn main() -> Result<(), String> {
                 image.save_as_ppm(&mut std::io::stdout()).unwrap();
             }
             Some(file_path) => {
-                let surface = window.surface(&event_pump)?;
-                save_image_file(file_path, &image, &window, &surface)?;
+                let surface = window.surface(&event_pump).unwrap();
+                save_image_file(file_path, &image, &window, &surface).unwrap();
             }
             _ => {
                 eprintln!("INFORMATION: No (valid) location to save was specified on the command line, so no image was saved.");
