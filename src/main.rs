@@ -289,8 +289,11 @@ pub fn main() -> Result<(), String> {
 
         // This is the nicest way I've found to forcibly kill any running
         // background threads.
+        //
+        // REVISIT: Unfortunately, it does prevent any `pending` destruction
+        // from happening on them.
         std::process::exit(0);
-    })
+    });
 }
 
 fn load_world(world_path: &Path) -> anyhow::Result<World> {
