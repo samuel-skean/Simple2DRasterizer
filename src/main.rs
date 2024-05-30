@@ -18,6 +18,7 @@ mod point_and_color;
 mod splines;
 mod user_interaction_helpers;
 mod world;
+mod possible_normal_termination;
 
 const APP_NAME: &str = "Skean's Wonderful Bézier Emporium";
 
