@@ -20,8 +20,11 @@ const fn message_box_flag_as_str(flag: AlertKind) -> &'static str {
 const fn we_are_alerting_through_the_gui(from_arg: bool) -> bool {
     !from_arg || cfg!(feature = "interactive-alerts-about-args")
 }
-/// Report non-fatal error or warning through both the GUI and stderr,
-/// respecting the compilation flag interactive-alerts-about-args.
+/// Reports an error through standard error and potentially the GUI, respecting
+/// the interactive-alerts-about-args setting.
+/// Indicates failure by returning an Err(()) variant when the program should
+/// terminate as a result of those same interactive-alerts-about-args rules.
+/// Those rules are not documented anywhere as of now.
 pub fn alert(
     from_arg: bool,
     kind: AlertKind,
@@ -32,9 +35,9 @@ pub fn alert(
     report_alert_on_only_command_line(kind, message);
     if we_are_alerting_through_the_gui(from_arg) {
         eprintln!("This needs your attention on the currently open window.");
-        show_simple_message_box(kind, title, message, window).unwrap()
+        show_simple_message_box(kind, title, message, window).unwrap();
     } else {
-        std::process::exit(1); // TODO: Make this a graceful shutdown w.r.t. the window.
+        panic!();
     }
 }
 
@@ -158,14 +161,4 @@ pub fn alert_about_io_error_with_world_file(
         world_file_message_after_error(specified_as_arg),
         &window,
     );
-}
-
-pub fn report_file_dialog_failure(window: &sdl2::video::Window) {
-    alert(
-        false,
-        AlertKind::INFORMATION,
-        "No Path Provided",
-        "We didn't get a path back from the dialog box.",
-        window,
-    )
 }

@@ -169,7 +169,9 @@ pub fn main() -> Result<(), String> {
                     } => {
                         if let Some(ref drawing_thread) = drawing_thread {
                             if !drawing_thread.is_finished() && config.output_path.is_some() {
-                                // TODO: Improve this warning message with information about what happens with each of the kinds of images that can be saved.
+                                // TODO: Improve this warning message with
+                                // information about what happens with each of
+                                // the kinds of images that can be saved.
                                 let quit_anyway = confer_with_user(
                                     AlertKind::WARNING,
                                     "Unfinished Work",
@@ -199,47 +201,77 @@ pub fn main() -> Result<(), String> {
             }
 
             if !world_loaded {
-                let world_path_option = config
+                let Some(world_path) = config
                     .world_path
                     .clone()
-                    .or_else(|| file_dialog(&["json"]).pick_file());
-                match world_path_option {
-                    Some(world_path) => {
-                        match load_world(&world_path) {
-                            Ok(w) => {
-                                world = Some(w);
-                                window
-                                    .set_title(
-                                        &(world_path.file_name().expect("There was no file name in the path provided for the world, and yet we successfully loaded said world. Fascinating...").to_string_lossy() + " - " + APP_NAME)
-                                    )
-                                    .map_err(|e| e.to_string())?;
-                                world_loaded = true;
-                                let image_borrow = &image; // TODO: Show this to Jacob Cohen.
-                                drawing_thread =
-                                    Some(s.spawn(move || world.unwrap().draw(image_borrow)));
-                            }
-                            // TODO: Get rid of the ugly instanceof (anyhow::Error::is, in this case, but still):
-                            Err(e) if e.is::<std::io::Error>() => {
-                                alert_about_io_error_with_world_file(false, e, &window);
-                                config.world_path = None;
-                            }
-                            Err(e) => alert_about_invalid_world_file(false, e, &window),
-                        };
+                    .or_else(|| file_dialog(&["json"]).pick_file())
+                else {
+                    alert(
+                        false,
+                        AlertKind::INFORMATION,
+                        "No Path Provided",
+                        "We didn't get a path back from the dialog box.\n\
+                        The application will quit when you dismiss this pop-up.",
+                        &window,
+                    );
+                    return Ok(());
+                };
+                match load_world(&world_path) {
+                    Ok(w) => {
+                        world = Some(w);
+                        window
+                            .set_title(
+                                &(world_path.file_name().expect("There was no file name in the path provided for the world, and yet we successfully loaded said world. Fascinating...").to_string_lossy() + " - " + APP_NAME)
+                            )
+                            .map_err(|e| e.to_string())?;
+                        world_loaded = true;
+                        let image_borrow = &image; // TODO: Show this to Jacob Cohen.
+                        drawing_thread =
+                            Some(s.spawn(move || world.unwrap().draw(image_borrow)));
                     }
-                    None => report_file_dialog_failure(&window),
-                }
+                    // TODO: Get rid of the ugly instanceof (anyhow::Error::is, in this case, but still):
+                    Err(e) if e.is::<std::io::Error>() => {
+                        alert_about_io_error_with_world_file(false, e, &window);
+                        config.world_path = None;
+                    }
+                    Err(e) => {
+                        alert_about_invalid_world_file(false, e, &window);
+                    }
+                };
             }
 
             let surface = window.surface(&event_pump)?;
 
+            // REVISIT: This following block (inside the if statement) doesn't
+            // conceptually need to have the complicated control flow it does as
+            // a virtue of depending on and setting save_image, since saving the
+            // image should not be retried. But it does, because it's hard to
+            // factor this out or move it directly into the arm of the
+            // match-statement-on-events where save_image is set to true because
+            // it needs to mutate the surface, which holds a references the
+            // event pump, which needs to be mutably referenced for it to be
+            // polled.
+            //
+            // "There's *gotta* be a better way!", in the words of a friend of
+            // mine about something completely different. I've thought about
+            // introducing various kinds of interior mutability, but I actually
+            // don't think they'd work because the event loop needs to stay
+            // mutably borrowed for the duration of the match statement.
+            //
             if save_image {
-                let file_path_option = file_dialog(&["bmp", "ppm"]).save_file();
-                match file_path_option {
-                    Some(file_path) => {
-                        save_image_file(file_path, &image, &window, &surface)?;
-                    }
-                    None => report_file_dialog_failure(&window),
-                }
+                let Some(file_path) = file_dialog(&["bmp", "ppm"]).save_file() else {
+                    alert(
+                        false,
+                        AlertKind::INFORMATION,
+                        "No Path Provided",
+                        "We didn't get a path back from the dialog box.",
+                        &window,
+                    );
+                    save_image = false;
+                    continue 'event_loop;
+                    // Do not quit the program in this case.
+                };
+                save_image_file(file_path, &image, &window, &surface)?;
             }
 
             save_image = false;
@@ -247,7 +279,6 @@ pub fn main() -> Result<(), String> {
             put_something_on_the_goshdarn_screen(surface, &image)?;
 
             std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
-            // The rest of the game loop goes here...
         }
 
         match config.output_path {
