@@ -260,13 +260,6 @@ pub fn main() -> Result<(), String> {
             //
             if save_image {
                 let Some(file_path) = file_dialog(&["bmp", "ppm"]).save_file() else {
-                    alert(
-                        false,
-                        AlertKind::INFORMATION,
-                        "No Path Provided",
-                        "We didn't get a path back from the dialog box.",
-                        &window,
-                    );
                     save_image = false;
                     continue 'event_loop;
                     // Do not quit the program in this case.
