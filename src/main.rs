@@ -175,7 +175,8 @@ pub fn main() {
                                 let quit_anyway = confer_with_user(
                                     AlertKind::WARNING,
                                     "Unfinished Work",
-                                    "Are you sure you want to quit? The drawing thread isn't finished!\nWho knows what image you're saving, I haven't bothered to figure it out.",
+                                    "Are you sure you want to quit? The drawing thread isn't finished!\n\
+                                    Who knows what image you're saving, I haven't bothered to figure it out.",
                                     &window,
                                     "Cancel",
                                     "Save and Quit Now"
@@ -221,13 +222,18 @@ pub fn main() {
                         world = Some(w);
                         window
                             .set_title(
-                                &(world_path.file_name().expect("There was no file name in the path provided for the world, and yet we successfully loaded said world. Fascinating...").to_string_lossy() + " - " + APP_NAME)
+                                &(
+                                    world_path
+                                    .file_name()
+                                    .expect("There was no file name in the path provided for the world, \
+                                    and yet we successfully loaded said world. Fascinating...")
+                                    .to_string_lossy() + " - " + APP_NAME
+                                )
                             )
                             .unwrap();
                         world_loaded = true;
                         let image_borrow = &image; // TODO: Show this to Jacob Cohen.
-                        drawing_thread =
-                            Some(s.spawn(move || world.unwrap().draw(image_borrow)));
+                        drawing_thread = Some(s.spawn(move || world.unwrap().draw(image_borrow)));
                     }
                     // TODO: Get rid of the ugly instanceof (anyhow::Error::is, in this case, but still):
                     Err(e) if e.is::<std::io::Error>() => {
@@ -283,7 +289,10 @@ pub fn main() {
                 save_image_file(file_path, &image, &window, &surface).unwrap();
             }
             _ => {
-                eprintln!("INFORMATION: No (valid) location to save was specified on the command line, so no image was saved.");
+                eprintln!(
+                    "INFORMATION: No (valid) location to save was specified on the \
+                command line, so no image was saved."
+                );
             }
         };
 
@@ -316,15 +325,17 @@ fn save_image_file(
             if confer_with_user(
                 MessageBoxFlag::WARNING,
                 "Warning",
-                "This might not do what you expect. This saves the image that has currently been created, not the image that is currently on the screen.",
+                "This might not do what you expect. \
+                This saves the image that has currently been created, \
+                not the image that is currently on the screen.",
                 window,
                 "Cancel",
-                "Save"
+                "Save",
             ) {
-                image.save_as_ppm(
-                    &mut BufWriter::new(
-                        File::create(file_path).map_err(|e| e.to_string())?)
-                )
+                image
+                    .save_as_ppm(&mut BufWriter::new(
+                        File::create(file_path).map_err(|e| e.to_string())?,
+                    ))
                     .map_err(|e| e.to_string())?;
             }
         }
@@ -336,8 +347,11 @@ fn save_image_file(
                 false,
                 MessageBoxFlag::ERROR,
                 "How on Earth Did We Get Here",
-                "You gave me a filename with an extension I don't support, I think through the GUI. How dare you?! (I only support .bmp and .ppm files for saving, btw).",
-                window);
+                "You gave me a filename with an extension I don't support, \
+                I think through the GUI. How dare you?! (I only support .bmp and .ppm \
+                files for saving, btw).",
+                window,
+            );
         }
     })
 }

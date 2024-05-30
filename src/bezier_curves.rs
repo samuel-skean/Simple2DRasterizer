@@ -82,7 +82,8 @@ impl Draw for CubicBezierCurve {
         }
 
         if cfg!(feature = "step-by-step-curves-and-lines") {
-            std::thread::sleep(Duration::from_millis(100)); // TODO: Somehow ensure this is higher than the current frame-time!
+            // TODO: Somehow ensure this is higher than the current delta-time!
+            std::thread::sleep(Duration::from_millis(100));
         }
     }
 }

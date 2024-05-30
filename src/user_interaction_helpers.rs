@@ -150,9 +150,11 @@ pub fn alert_about_io_error_with_world_file(
     window: &sdl2::video::Window,
 ) {
     let message_before_error = if specified_as_arg {
-        "There was an I/O error in reading the world file specified as an argument. Its description reads:\n"
+        "There was an I/O error in reading the world file specified as an argument. \
+        Its description reads:\n"
     } else {
-        "THIS WAS SLIGHTLY UNEXPECTED! :P\nPlease contact the maintainer with this error message.\nThere was an I/O error in reading the world file specified. Its description reads:\n"
+        "THIS WAS SLIGHTLY UNEXPECTED! :P\nPlease contact the maintainer with this error message.\n\
+        There was an I/O error in reading the world file specified. Its description reads:\n"
     };
     alert_about_error(
         specified_as_arg,
