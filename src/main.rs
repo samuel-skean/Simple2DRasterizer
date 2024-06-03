@@ -360,13 +360,15 @@ fn put_something_on_the_goshdarn_screen(
     mut surface: sdl2::video::WindowSurfaceRef,
     image: &PixelGrid,
 ) -> Result<(), String> {
+    let byte_slice = surface
+        .without_lock_mut()
+        .ok_or("Unable to write to the surface.")?;
     let surface_slice: &mut [u32] = unsafe {
         // Look ma! A silly little bit of unsafe!
-        std::mem::transmute(
-            // TODO: Audit this, specifically for what happens to the size of the slice.
-            surface
-                .without_lock_mut()
-                .ok_or("Unable to write to the surface.")?,
+        let length_dividend = std::mem::size_of::<u32>() / std::mem::size_of::<u8>();
+        std::slice::from_raw_parts_mut(
+            std::mem::transmute(byte_slice.as_mut_ptr()),
+            byte_slice.len() / length_dividend,
         )
     };
     for (i, p) in image.0.iter().flatten().enumerate() {
