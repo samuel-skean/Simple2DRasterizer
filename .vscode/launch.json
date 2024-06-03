@@ -14,7 +14,7 @@
                     "--bin=skean-splines-fun",
                     "--package=skean-splines-fun",
                     "--no-default-features",
-                    "--features=step-by-step-curves-and-lines"
+                    "--features=bundled,step-by-step-curves-and-lines"
                 ],
                 "filter": {
                     "name": "skean-splines-fun",

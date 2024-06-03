@@ -16,7 +16,7 @@ serde_json = "1.0.117"
 typetag = "0.2.16"
 
 [features]
-default = ["leisurely-drawing"]
+default = ["bundled","leisurely-drawing"]
 leisurely-drawing = []             # Draw things slooowly.
 step-by-step-curves-and-lines = [] # Pause just a little after drawing each curve and line.
 interactive-alerts-about-args = [] # Show graphical alerts for errors caused by arguments specified on the command line instead of just terminating.
