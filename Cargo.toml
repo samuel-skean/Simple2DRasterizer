@@ -10,7 +10,7 @@ anyhow = "1.0.86"
 clap = { version = "4.5.4", features = ["derive"] }
 itertools = "0.13.0"
 rfd = "0.14.1" # TODO: This guy keeps putting things on standard err. Stop it! Or at least learn how.
-sdl2 = { version = "0.36.0", features = ["bundled", "static-link"] }
+sdl2 = { version = "0.36.0", features = ["use-vcpkg", "static-link"] }
 serde = "1.0.202"
 serde_json = "1.0.117"
 typetag = "0.2.16"
@@ -20,3 +20,11 @@ default = ["leisurely-drawing"]
 leisurely-drawing = []             # Draw things slooowly.
 step-by-step-curves-and-lines = [] # Pause just a little after drawing each curve and line.
 interactive-alerts-about-args = [] # Show graphical alerts for errors caused by arguments specified on the command line instead of just terminating.
+
+[package.metadata.vcpkg]
+dependencies = ["sdl2"]
+git = "https://github.com/microsoft/vcpkg"
+tag = "2024.05.24"
+
+[package.metadata.vcpkg.target]
+x86_64-pc-windows-msvc = { triplet = "x64-windows-static-md" }
