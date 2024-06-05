@@ -1,51 +1,54 @@
+use sdl2::pixels::{PixelFormat, PixelFormatEnum};
 use serde::{Deserialize, Serialize};
 
 use crate::PixelGrid;
 use std::{
-    ops::{Add, Mul},
-    sync::atomic::{AtomicU8, Ordering::*},
+    cell::Cell, ops::{Add, Mul}, sync::atomic::{self, AtomicU32, Ordering::*}
 };
+
+thread_local! {
+    static PIXEL_FORMAT: Cell<Option<PixelFormat>> = const { Cell::new(None) };
+}
+
+pub fn init_pixel_format_on_current_thread(pixel_format_enum: PixelFormatEnum) {
+    PIXEL_FORMAT.set(Some(PixelFormat::try_from(pixel_format_enum).unwrap()));
+}
+
+pub type Color = sdl2::pixels::Color;
 
 #[derive(Clone, Copy, Deserialize, Serialize)]
 pub struct Point2D(pub f64, pub f64); // A point in 2d space, represented as (x, y), with (0, 0) as the upper-left corner.
-#[derive(Clone, Copy, Deserialize, Serialize)]
-pub struct Color(pub u8, pub u8, pub u8); // An 8-bit-per-channel/24-bit-total color, suitable for "millions" (about 16.7 million) colors.
 
-pub struct ShareableColor(pub AtomicU8, pub AtomicU8, pub AtomicU8);
+pub struct AtomicColor(AtomicU32);
 
-impl ShareableColor {
-    pub fn store(&self, value: Color) {
-        self.0.store(value.0, Release);
-        self.1.store(value.1, Release);
-        self.2.store(value.2, Release);
+impl Default for AtomicColor {
+    fn default() -> Self {
+        let local_pixel_format = PIXEL_FORMAT.take().unwrap();
+        let result = Self(AtomicU32::new(Color::BLACK.to_u32(&local_pixel_format)));
+        PIXEL_FORMAT.set(Some(local_pixel_format));
+        result
     }
 }
 
-impl From<Color> for ShareableColor {
-    fn from(value: Color) -> Self {
-        ShareableColor(value.0.into(), value.1.into(), value.2.into())
+impl AtomicColor {
+    pub fn load(&self, order: atomic::Ordering) -> Color {
+        let local_pixel_format = PIXEL_FORMAT.take().unwrap();
+        let result = Color::from_u32(&local_pixel_format, self.0.load(order));
+        PIXEL_FORMAT.set(Some(local_pixel_format));
+        result
+    }
+
+    pub fn load_u32(&self, order: atomic::Ordering) -> u32 {
+        self.0.load(order)
+    }
+
+    pub fn store(&self, value: Color, order: atomic::Ordering) {
+        let local_pixel_format = PIXEL_FORMAT.take().unwrap();
+        self.0.store(value.to_u32(&local_pixel_format), order);
+        PIXEL_FORMAT.set(Some(local_pixel_format));
     }
 }
 
-impl From<ShareableColor> for Color {
-    fn from(value: ShareableColor) -> Self {
-        Color(
-            value.0.into_inner(),
-            value.1.into_inner(),
-            value.2.into_inner(),
-        )
-    }
-}
-
-impl From<&ShareableColor> for sdl2::pixels::Color {
-    fn from(value: &ShareableColor) -> Self {
-        sdl2::pixels::Color::RGB(
-            value.0.load(Acquire),
-            value.1.load(Acquire),
-            value.2.load(Acquire),
-        )
-    }
-}
 
 impl Mul<f64> for Point2D {
     type Output = Point2D;
@@ -63,7 +66,7 @@ impl Add for Point2D {
 
 impl Point2D {
     pub fn draw_specifying_color(&self, target: &PixelGrid, color: Color) {
-        target.0[self.1 as usize][self.0 as usize].store(color);
+        target.0[self.1 as usize][self.0 as usize].store(color, Release);
         // The order of the coordinates is weird and unintuitive!
     }
 }

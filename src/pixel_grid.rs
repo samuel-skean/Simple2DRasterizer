@@ -1,8 +1,8 @@
 use std::{io::Write, sync::atomic::Ordering::*};
 
-use crate::point_and_color::{Color, ShareableColor};
+use crate::point_and_color::AtomicColor;
 
-pub struct PixelGrid(pub Vec<Vec<ShareableColor>>);
+pub struct PixelGrid(pub Vec<Vec<AtomicColor>>);
 
 #[derive(Clone, Copy)]
 pub struct Resolution {
@@ -16,7 +16,7 @@ impl PixelGrid {
         for j in 0..res.height {
             grid.0.push(Vec::new());
             for _ in 0..res.width {
-                grid.0[j].push(Color(0, 0, 0).into())
+                grid.0[j].push(AtomicColor::default())
             }
         }
         grid
@@ -33,12 +33,13 @@ impl PixelGrid {
         // PPM Body
         for scanline in &self.0 {
             for pixel in scanline {
+                let pixel = pixel.load(Acquire);
                 write!(
                     dest,
                     "{} {} {} ",
-                    pixel.0.load(Acquire),
-                    pixel.1.load(Acquire),
-                    pixel.2.load(Acquire)
+                    pixel.r,
+                    pixel.g,
+                    pixel.b,
                 )?;
             }
             writeln!(dest, "")?;

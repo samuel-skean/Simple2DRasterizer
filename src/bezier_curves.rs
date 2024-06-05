@@ -13,6 +13,7 @@ use crate::{
 pub struct QuadraticBezierCurve {
     #[serde(rename = "points")]
     pub p: (Point2D, Point2D, Point2D),
+    #[serde(with = "crate::serde_sdl_color")]
     pub color: Color,
 }
 
@@ -48,6 +49,7 @@ impl Draw for QuadraticBezierCurve {
 pub struct CubicBezierCurve {
     #[serde(rename = "points")]
     pub p: (Point2D, Point2D, Point2D, Point2D),
+    #[serde(with = "crate::serde_sdl_color")]
     pub color: Color,
 }
 

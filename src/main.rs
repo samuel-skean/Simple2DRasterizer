@@ -1,10 +1,12 @@
 use std::io::BufWriter;
 use std::path::{Path, PathBuf};
+use std::sync::atomic;
 use std::thread::ScopedJoinHandle;
 use std::{fs::File, io::BufReader};
 
 use clap::Parser;
 use pixel_grid::Resolution;
+use point_and_color::init_pixel_format_on_current_thread;
 use sdl2::messagebox::MessageBoxFlag;
 use user_interaction_helpers::*;
 
@@ -18,6 +20,7 @@ mod point_and_color;
 mod splines;
 mod user_interaction_helpers;
 mod world;
+mod serde_sdl_color;
 
 const APP_NAME: &str = "Skean's Wonderful Bézier Emporium";
 
@@ -105,6 +108,12 @@ pub fn main() {
         .build()
         .unwrap();
 
+    let pixel_format_enum = {
+        let event_pump = sdl_context.event_pump().unwrap();
+        window.surface(&event_pump).unwrap().pixel_format_enum()
+    };
+    init_pixel_format_on_current_thread(pixel_format_enum);
+
     let image: PixelGrid = PixelGrid::new(res);
 
     // I'm not totally clear on why I'm getting this warning - when I follow the
@@ -146,6 +155,9 @@ pub fn main() {
         let mut drawing_thread: Option<ScopedJoinHandle<()>> = None;
         let mut event_pump = sdl_context.event_pump().unwrap();
         let surface = window.surface(&event_pump).unwrap();
+
+
+        let pixel_format_enum = surface.pixel_format_enum();
 
         put_something_on_the_goshdarn_screen(surface, &image).unwrap();
 
@@ -233,7 +245,10 @@ pub fn main() {
                             .unwrap();
                         world_loaded = true;
                         let image_borrow = &image; // TODO: Show this to Jacob Cohen.
-                        drawing_thread = Some(s.spawn(move || world.unwrap().draw(image_borrow)));
+                        drawing_thread = Some(s.spawn(move || {
+                            init_pixel_format_on_current_thread(pixel_format_enum);
+                            world.unwrap().draw(image_borrow);
+                        }));
                     }
                     // TODO: Get rid of the ugly instanceof (anyhow::Error::is, in this case, but still):
                     Err(e) if e.is::<std::io::Error>() => {
@@ -372,9 +387,7 @@ fn put_something_on_the_goshdarn_screen(
         )
     };
     for (i, p) in image.0.iter().flatten().enumerate() {
-        let color: sdl2::pixels::Color = p.into();
-        let color_as_number = color.to_u32(&surface.pixel_format());
-        surface_slice[i] = color_as_number;
+        surface_slice[i] = p.load_u32(atomic::Ordering::Acquire);
     }
     surface.finish()?;
     Ok(())

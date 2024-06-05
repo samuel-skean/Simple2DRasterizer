@@ -11,6 +11,7 @@ use crate::{
 #[derive(Deserialize, Serialize)]
 pub struct CubicBezierSpline {
     points: Vec<Point2D>,
+    #[serde(with = "crate::serde_sdl_color")]
     color: Color,
 }
 

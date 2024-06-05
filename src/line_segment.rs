@@ -13,6 +13,7 @@ use crate::{
 pub struct LineSegment {
     #[serde(rename = "points")]
     pub p: (Point2D, Point2D),
+    #[serde(with = "crate::serde_sdl_color")]
     pub color: Color,
 }
 
