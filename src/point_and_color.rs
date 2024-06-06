@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::PixelGrid;
+use crate::{meaningless_bytes::MeaninglessBytes, PixelGrid};
 use std::ops::{Add, Mul};
 
 #[derive(Clone, Copy, Deserialize, Serialize)]
@@ -15,7 +15,7 @@ pub struct Color(
     // bytemuck::NoUninit, required to use Atomic<Color>. Implicitly initialized
     // using Default::default(), which returns 0.
     #[serde(skip)]
-    u8,
+    MeaninglessBytes<1>,
 ); // An 8-bit-per-channel/24-bit-total color, suitable for "millions" (about 16.7 million) colors.
 
 impl Color {
