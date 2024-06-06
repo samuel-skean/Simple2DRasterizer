@@ -1,48 +1,35 @@
 use serde::{Deserialize, Serialize};
 
 use crate::PixelGrid;
-use std::{
-    ops::{Add, Mul},
-    sync::atomic::{AtomicU8, Ordering::*},
-};
+use std::ops::{Add, Mul};
 
 #[derive(Clone, Copy, Deserialize, Serialize)]
 pub struct Point2D(pub f64, pub f64); // A point in 2d space, represented as (x, y), with (0, 0) as the upper-left corner.
-#[derive(Clone, Copy, Deserialize, Serialize)]
-pub struct Color(pub u8, pub u8, pub u8); // An 8-bit-per-channel/24-bit-total color, suitable for "millions" (about 16.7 million) colors.
+#[derive(Clone, Copy, Deserialize, Serialize, bytemuck::NoUninit)]
+#[repr(C, align(4))]
+pub struct Color(
+    pub u8,
+    pub u8,
+    pub u8,
+    // Logical padding, though actual padding is not allowed because of
+    // bytemuck::NoUninit, required to use Atomic<Color>. Implicitly initialized
+    // using Default::default(), which returns 0.
+    #[serde(skip)]
+    u8,
+); // An 8-bit-per-channel/24-bit-total color, suitable for "millions" (about 16.7 million) colors.
 
-pub struct ShareableColor(pub AtomicU8, pub AtomicU8, pub AtomicU8);
-
-impl ShareableColor {
-    pub fn store(&self, value: Color) {
-        self.0.store(value.0, Release);
-        self.1.store(value.1, Release);
-        self.2.store(value.2, Release);
+impl Color {
+    pub fn new(r: u8, g: u8, b: u8) -> Self {
+        Color(r, g, b, Default::default())
     }
 }
 
-impl From<Color> for ShareableColor {
+impl From<Color> for sdl2::pixels::Color {
     fn from(value: Color) -> Self {
-        ShareableColor(value.0.into(), value.1.into(), value.2.into())
-    }
-}
-
-impl From<ShareableColor> for Color {
-    fn from(value: ShareableColor) -> Self {
-        Color(
-            value.0.into_inner(),
-            value.1.into_inner(),
-            value.2.into_inner(),
-        )
-    }
-}
-
-impl From<&ShareableColor> for sdl2::pixels::Color {
-    fn from(value: &ShareableColor) -> Self {
         sdl2::pixels::Color::RGB(
-            value.0.load(Acquire),
-            value.1.load(Acquire),
-            value.2.load(Acquire),
+            value.0,
+            value.1,
+            value.2,
         )
     }
 }
@@ -63,7 +50,7 @@ impl Add for Point2D {
 
 impl Point2D {
     pub fn draw_specifying_color(&self, target: &PixelGrid, color: Color) {
-        target.0[self.1 as usize][self.0 as usize].store(color);
+        target.0[self.1 as usize][self.0 as usize].store(color, atomic::Ordering::Release);
         // The order of the coordinates is weird and unintuitive!
     }
 }

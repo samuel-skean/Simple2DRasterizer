@@ -89,6 +89,10 @@ impl Cli {
 }
 
 pub fn main() {
+    eprintln!(
+        "Implementation of Atomic<Color> is lock free: {}",
+        atomic::Atomic::<point_and_color::Color>::is_lock_free(),
+    );
     let mut config = Cli::parse().validate();
 
     let res = Resolution {
@@ -372,7 +376,7 @@ fn put_something_on_the_goshdarn_screen(
         )
     };
     for (i, p) in image.0.iter().flatten().enumerate() {
-        let color: sdl2::pixels::Color = p.into();
+        let color = sdl2::pixels::Color::from(p.load(atomic::Ordering::Acquire));
         let color_as_number = color.to_u32(&surface.pixel_format());
         surface_slice[i] = color_as_number;
     }
