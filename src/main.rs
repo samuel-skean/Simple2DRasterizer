@@ -365,20 +365,14 @@ fn put_something_on_the_goshdarn_screen(
     mut surface: sdl2::video::WindowSurfaceRef,
     image: &PixelGrid,
 ) -> Result<(), String> {
+    let pixel_format = surface.pixel_format();
     let byte_slice = surface
         .without_lock_mut()
         .ok_or("Unable to write to the surface.")?;
-    let surface_slice: &mut [u32] = unsafe {
-        // Look ma! A silly little bit of unsafe!
-        let length_dividend = std::mem::size_of::<u32>() / std::mem::size_of::<u8>();
-        std::slice::from_raw_parts_mut(
-            std::mem::transmute(byte_slice.as_mut_ptr()),
-            byte_slice.len() / length_dividend,
-        )
-    };
+    let surface_slice: &mut [u32] = bytemuck::cast_slice_mut(byte_slice);
     for (i, p) in image.0.iter().flatten().enumerate() {
         let color = sdl2::pixels::Color::from(p.load(atomic::Ordering::Acquire));
-        let color_as_number = color.to_u32(&surface.pixel_format());
+        let color_as_number = color.to_u32(&pixel_format);
         surface_slice[i] = color_as_number;
     }
     surface.finish()?;
