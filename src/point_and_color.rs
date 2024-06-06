@@ -3,15 +3,17 @@ use serde::{Deserialize, Serialize};
 
 use crate::PixelGrid;
 use std::{
-    cell::Cell, ops::{Add, Mul}, sync::atomic::{self, AtomicU32, Ordering::*}
+    cell::UnsafeCell, ops::{Add, Mul}, sync::atomic::{self, AtomicU32, Ordering::*}
 };
 
 thread_local! {
-    static PIXEL_FORMAT: Cell<Option<PixelFormat>> = const { Cell::new(None) };
+    static PIXEL_FORMAT: UnsafeCell<Option<PixelFormat>> = const { UnsafeCell::new(None) };
 }
 
 pub fn init_pixel_format_on_current_thread(pixel_format_enum: PixelFormatEnum) {
-    PIXEL_FORMAT.set(Some(PixelFormat::try_from(pixel_format_enum).unwrap()));
+        PIXEL_FORMAT.with(|pixel_format| {
+            unsafe { *pixel_format.get() = Some(PixelFormat::try_from(pixel_format_enum).unwrap()) }
+        });
 }
 
 pub type Color = sdl2::pixels::Color;
@@ -23,19 +25,19 @@ pub struct AtomicColor(AtomicU32);
 
 impl Default for AtomicColor {
     fn default() -> Self {
-        let local_pixel_format = unsafe { PIXEL_FORMAT.take().unwrap_unchecked() };
-        let result = Self(AtomicU32::new(Color::BLACK.to_u32(&local_pixel_format)));
-        PIXEL_FORMAT.set(Some(local_pixel_format));
-        result
+        PIXEL_FORMAT.with(|pixel_format| {
+            Self(AtomicU32::new(
+                Color::BLACK.to_u32(unsafe { &pixel_format.get().as_ref().unwrap_unchecked().as_ref().unwrap_unchecked() })
+            ))
+        })
     }
 }
 
 impl AtomicColor {
     pub fn load(&self, order: atomic::Ordering) -> Color {
-        let local_pixel_format = unsafe { PIXEL_FORMAT.take().unwrap_unchecked() };
-        let result = Color::from_u32(&local_pixel_format, self.0.load(order));
-        PIXEL_FORMAT.set(Some(local_pixel_format));
-        result
+        PIXEL_FORMAT.with(|pixel_format| {
+            Color::from_u32(unsafe { &pixel_format.get().as_ref().unwrap_unchecked().as_ref().unwrap_unchecked() }, self.0.load(order))
+        })
     }
 
     pub fn load_u32(&self, order: atomic::Ordering) -> u32 {
@@ -43,9 +45,14 @@ impl AtomicColor {
     }
 
     pub fn store(&self, value: Color, order: atomic::Ordering) {
-        let local_pixel_format = unsafe { PIXEL_FORMAT.take().unwrap_unchecked() };
-        self.0.store(value.to_u32(&local_pixel_format), order);
-        PIXEL_FORMAT.set(Some(local_pixel_format));
+        self.0.store(
+            PIXEL_FORMAT.with(|pixel_format| {
+                value.to_u32(unsafe { &pixel_format.get().as_ref().unwrap_unchecked().as_ref().unwrap_unchecked() })
+            }),
+            order,
+        );
+
+
     }
 }
 
