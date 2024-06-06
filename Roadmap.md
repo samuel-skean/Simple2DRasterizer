@@ -1,4 +1,6 @@
 Feature Ideas:
+- Encapsulate the behavior of the display, including the format of its pixels (ideally a `PixelFormat`, which cannot be shared among threads). Look to the Fall 2021 CS 341 Project 3 for inspiration.
+
 - Save to multiple images at once, specified on the command line or via the GUI.
 
 - Shuffle the order in which splines are drawn. Attribution: Jacob Cohen
