@@ -23,11 +23,15 @@ pub struct Point2D(pub f64, pub f64); // A point in 2d space, represented as (x,
 
 pub struct AtomicColor(AtomicU32);
 
+unsafe fn borrow_pixel_format(pixel_format_unsafe_cell: &UnsafeCell<Option<PixelFormat>>) -> &PixelFormat {
+    &pixel_format_unsafe_cell.get().as_ref().unwrap_unchecked().as_ref().unwrap_unchecked()
+}
+
 impl Default for AtomicColor {
     fn default() -> Self {
         PIXEL_FORMAT.with(|pixel_format| {
             Self(AtomicU32::new(
-                Color::BLACK.to_u32(unsafe { &pixel_format.get().as_ref().unwrap_unchecked().as_ref().unwrap_unchecked() })
+                Color::BLACK.to_u32(unsafe { borrow_pixel_format(pixel_format)})
             ))
         })
     }
@@ -36,7 +40,10 @@ impl Default for AtomicColor {
 impl AtomicColor {
     pub fn load(&self, order: atomic::Ordering) -> Color {
         PIXEL_FORMAT.with(|pixel_format| {
-            Color::from_u32(unsafe { &pixel_format.get().as_ref().unwrap_unchecked().as_ref().unwrap_unchecked() }, self.0.load(order))
+            Color::from_u32(
+                unsafe { borrow_pixel_format(pixel_format) },
+                self.0.load(order),
+            )
         })
     }
 
@@ -47,7 +54,7 @@ impl AtomicColor {
     pub fn store(&self, value: Color, order: atomic::Ordering) {
         self.0.store(
             PIXEL_FORMAT.with(|pixel_format| {
-                value.to_u32(unsafe { &pixel_format.get().as_ref().unwrap_unchecked().as_ref().unwrap_unchecked() })
+                value.to_u32(unsafe { borrow_pixel_format(pixel_format) })
             }),
             order,
         );
