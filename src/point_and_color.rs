@@ -23,7 +23,7 @@ pub struct AtomicColor(AtomicU32);
 
 impl Default for AtomicColor {
     fn default() -> Self {
-        let local_pixel_format = PIXEL_FORMAT.take().unwrap();
+        let local_pixel_format = unsafe { PIXEL_FORMAT.take().unwrap_unchecked() };
         let result = Self(AtomicU32::new(Color::BLACK.to_u32(&local_pixel_format)));
         PIXEL_FORMAT.set(Some(local_pixel_format));
         result
@@ -32,7 +32,7 @@ impl Default for AtomicColor {
 
 impl AtomicColor {
     pub fn load(&self, order: atomic::Ordering) -> Color {
-        let local_pixel_format = PIXEL_FORMAT.take().unwrap();
+        let local_pixel_format = unsafe { PIXEL_FORMAT.take().unwrap_unchecked() };
         let result = Color::from_u32(&local_pixel_format, self.0.load(order));
         PIXEL_FORMAT.set(Some(local_pixel_format));
         result
@@ -43,7 +43,7 @@ impl AtomicColor {
     }
 
     pub fn store(&self, value: Color, order: atomic::Ordering) {
-        let local_pixel_format = PIXEL_FORMAT.take().unwrap();
+        let local_pixel_format = unsafe { PIXEL_FORMAT.take().unwrap_unchecked() };
         self.0.store(value.to_u32(&local_pixel_format), order);
         PIXEL_FORMAT.set(Some(local_pixel_format));
     }
