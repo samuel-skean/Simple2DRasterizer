@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::{
     bezier_curves::CubicBezierCurve,
@@ -8,8 +8,19 @@ use crate::{
     point_and_color::{Color, Point2D},
 };
 
+fn deserialize_cubic_spline_points<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Vec<Point2D>, D::Error> {
+    let points = Vec::<Point2D>::deserialize(deserializer)?;
+    if (points.len() - 1) % 3 == 0 {
+        Ok(points)
+    } else {
+        Err(serde::de::Error::invalid_value(serde::de::Unexpected::Seq,
+            &"a valid sequence of points for a cubic spline - a sequence of at least length 4, which is 1 greater than a multiple of 3"))
+    }
+}
+
 #[derive(Deserialize, Serialize)]
 pub struct CubicBezierSpline {
+    #[serde(deserialize_with = "deserialize_cubic_spline_points")]
     points: Vec<Point2D>,
     color: Color,
 }
