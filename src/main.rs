@@ -73,8 +73,7 @@ impl Cli {
         let extension = self
             .output_path
             .as_ref()
-            .map(|output_path| output_path.extension())
-            .flatten();
+            .and_then(|output_path| output_path.extension());
         if extension.is_some_and(|e| e == "ppm" || e == "bmp") {
             self.clone() // TODO: Remove this `clone()` with a static, or a LazyCell, or something.
         } else {
@@ -126,7 +125,7 @@ pub fn main() {
     // this:
     let mut world: Option<World> = match config.world_path {
         Some(ref world_path) => {
-            let load_world_result = load_world(&world_path);
+            let load_world_result = load_world(world_path);
             match load_world_result {
                 Ok(world) => Some(world),
                 // TODO: Get rid of the ugly instanceof (anyhow::Error::is, in this case, but still):
@@ -325,7 +324,7 @@ fn save_image_file(
     window: &sdl2::video::Window,
     surface: &sdl2::video::WindowSurfaceRef,
 ) -> Result<(), String> {
-    Ok(match file_path.extension() {
+    match file_path.extension() {
         Some(s) if s == "ppm" => {
             if confer_with_user(
                 MessageBoxFlag::WARNING,
@@ -358,7 +357,8 @@ fn save_image_file(
                 window,
             );
         }
-    })
+    }
+    Ok(())
 }
 
 fn put_something_on_the_goshdarn_screen(

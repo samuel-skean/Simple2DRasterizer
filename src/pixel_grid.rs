@@ -44,7 +44,7 @@ impl PixelGrid {
                     pixel.2,
                 )?;
             }
-            writeln!(dest, "")?;
+            writeln!(dest)?;
         }
         Ok(())
     }

@@ -161,6 +161,6 @@ pub fn alert_about_io_error_with_world_file(
         error,
         message_before_error,
         world_file_message_after_error(specified_as_arg),
-        &window,
+        window,
     );
 }
